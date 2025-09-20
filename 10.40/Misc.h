@@ -9,6 +9,12 @@ namespace Misc {
 		return;
 	}
 
+	void (*DispatchRequestOG)(void* a1, void* MCPData, int a3);
+	void DispatchRequest(void* a1, void* MCPData, int a3)
+	{
+		return DispatchRequestOG(a1, MCPData, 3);
+	}
+
 	int CanCreateContext(AActor* This)
 	{
 		//Log("CanCreateContext Called!");
@@ -17,6 +23,7 @@ namespace Misc {
 
 	void HookAll() {
 		MH_CreateHook((LPVOID)(ImageBase + 0x30B2B70), KickPlayer, nullptr);
+		MH_CreateHook((LPVOID)(ImageBase + 0xBAED60), DispatchRequest, (LPVOID*)&DispatchRequestOG);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x227D6E0), IsFalse, nullptr); //CollectGarbage
 		MH_CreateHook((LPVOID)(ImageBase + 0x15D0330), IsFalse, nullptr); //ChangeGameSessionId

@@ -26,47 +26,6 @@ namespace Pawn
 		PlayerPawn->IncomingPickups.Add(Pickup);
 	}
 
-	void (*OnReloadOG)(AFortWeapon* a1, int a2 /*Amount*/);
-	void __fastcall OnReload(AFortWeapon* a1, int a2 /*Amount*/)
-	{
-		if (!a1) return OnReloadOG(a1, a2);
-
-		AFortPlayerPawn* PlayerPawn = (AFortPlayerPawn*)a1->GetOwner();
-		if (!PlayerPawn || !PlayerPawn->Controller) return OnReloadOG(a1, a2);
-
-		AFortPlayerController* PC = (AFortPlayerController*)PlayerPawn->Controller;
-		if (!PC) return OnReloadOG(a1, a2);
-		AFortPlayerStateAthena* PS = (AFortPlayerStateAthena*)PlayerPawn->PlayerState;
-		if (!PS || PS->bIsABot) return OnReloadOG(a1, a2);
-		
-		FFortItemEntry* WeaponItemEntry = FortInventory::FindItemEntry(PC, a1->ItemEntryGuid);
-		if (!WeaponItemEntry || !WeaponItemEntry->ItemDefinition) return OnReloadOG(a1, a2);
-
-
-		UFortWorldItemDefinition* AmmoDef = a1->WeaponData ? a1->WeaponData->GetAmmoWorldItemDefinition_BP() : nullptr;
-		if (!AmmoDef) return OnReloadOG(a1, a2);
-
-		FFortItemEntry* AmmoItemEntry = FortInventory::FindItemEntry(PC, AmmoDef);
-		//if (!AmmoItemEntry) return OnReloadOG(a1, a2);
-
-		if (AmmoItemEntry)
-		{
-			FortInventory::RemoveItem(PC, AmmoItemEntry->ItemDefinition, a2);
-		}
-		else
-		{
-			int MaxStackSize = WeaponItemEntry->ItemDefinition->MaxStackSize;
-			if (MaxStackSize > 1) FortInventory::RemoveItem(PC, WeaponItemEntry->ItemDefinition, a2);
-		}
-
-		WeaponItemEntry->LoadedAmmo = a1->AmmoCount; //a1->GetBulletsPerClip();
-
-		FortInventory::Update(PC, WeaponItemEntry);
-		
-		return OnReloadOG(a1, a2);
-	}
-
-
 	__int64 (*CompletePickupAnimationOG)(AFortPickup* a1);
 	__int64 __fastcall CompletePickupAnimation(AFortPickup* a1)
 	{
@@ -376,7 +335,6 @@ namespace Pawn
 	{
 		HookVTable<APlayerPawn_Athena_C>(0x1C7, ServerHandlePickup);
 
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1C66A30), OnReload, reinterpret_cast<void**>(&OnReloadOG));
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x16F7D10), CompletePickupAnimation, reinterpret_cast<void**>(&CompletePickupAnimationOG));
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EF0A80), NetMulticast_Athena_BatchedDamageCues, reinterpret_cast<void**>(&NetMulticast_Athena_BatchedDamageCuesOG));
 		MH_CreateHook((LPVOID)(ImageBase + 0x196DB00), OnCapsuleBeginOverlap, (LPVOID*)&OnCapsuleBeginOverlapOG);

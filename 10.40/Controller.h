@@ -13,6 +13,8 @@ namespace Controller
 	void ServerAcknowledgePossession(APlayerController* PC, APawn* P)
 	{
 		PC->AcknowledgedPawn = P;
+
+		return ServerAcknowledgePossessionOG(PC, P);
 	}
 
 	void (*ServerReadyToStartMatchOG)(AFortPlayerControllerAthena* PC);
@@ -32,6 +34,8 @@ namespace Controller
 
 			Log(std::format("AFortPlayerController::ServerReadyToStartMatch bSetupWorld = {}", bSetupWorld).c_str());
 		}
+
+		return ServerReadyToStartMatchOG(PC);
 	}
 
 	void (*ServerLoadingScreenDroppedOG)(AFortPlayerControllerAthena* PC);
@@ -45,75 +49,17 @@ namespace Controller
 		return ServerLoadingScreenDroppedOG(PC);
 	}
 
-	void ServerExecuteInventoryItem(AFortPlayerController* PC, const FGuid& ItemGuid)
+	void (*ServerExecuteInventoryItemOG)(AFortPlayerController* This, const FGuid& ItemGuid);
+	void ServerExecuteInventoryItem(AFortPlayerController* This, const FGuid& ItemGuid)
 	{
-		if (!PC || !PC->MyFortPawn)
-			return;
+		AFortPlayerPawnAthena* Pawn = (AFortPlayerPawnAthena*)This->Pawn;
 
-		if (PC->IsInAircraft())
-			return;
-
-		UFortWeaponItemDefinition* ItemDefinition = (UFortWeaponItemDefinition*)FortInventory::FindItemDefinition(PC, ItemGuid);
-		PC->MyFortPawn->EquipWeaponDefinition(ItemDefinition, ItemGuid);
-	}
-
-	void OnDamageServer(ABuildingActor* BuildingActor, float Damage, const struct FGameplayTagContainer& DamageTags, const struct FVector& Momentum, const struct FHitResult& HitInfo, AController* InstigatedBy, AActor* DamageCauser, const struct FGameplayEffectContextHandle& EffectContext)
-	{
-		if (!BuildingActor || !InstigatedBy) return;
-		if (BuildingActor->IsA(ABuildingSMActor::StaticClass()) && InstigatedBy->IsA(AAthena_PlayerController_C::StaticClass()))
-		{
-			ABuildingSMActor* BuildingSMActor = (ABuildingSMActor*)BuildingActor;
-			AFortPlayerControllerAthena* PC = (AFortPlayerControllerAthena*)InstigatedBy;
-			if (!PC->MyFortPawn) return;
-			if (BuildingSMActor->bDestroyed || BuildingSMActor->bPlayerPlaced) return;
-
-			AFortWeapon* Weapon = (AFortWeapon*)PC->MyFortPawn->CurrentWeapon;
-			if (!Weapon) return;
-			if (Weapon->WeaponData->IsA(UFortWeaponRangedItemDefinition::StaticClass())) return;
-			UFortWeaponMeleeItemDefinition* PickaxeItemDefinition = (UFortWeaponMeleeItemDefinition*)Weapon->WeaponData;
-			if (!PickaxeItemDefinition) return;
-
-			int DamageCount = (Damage == 100.f) ? UKismetMathLibrary::RandomFloatInRange(15, 20) : UKismetMathLibrary::RandomFloatInRange(5, 10);
-
-			PC->ClientReportDamagedResourceBuilding(BuildingSMActor, BuildingSMActor->ResourceType, DamageCount, BuildingSMActor->bDestroyed, Damage == 100.f);
-
-			UFortResourceItemDefinition* ResourceItemDefinition = UFortKismetLibrary::K2_GetResourceItemDefinition(BuildingSMActor->ResourceType);
-			if (!ResourceItemDefinition) return;
-
-
-			FFortItemEntry* ItemEntry = FortInventory::FindItemEntry(PC, ResourceItemDefinition);
-
-			if (!ItemEntry) // if item don't exist we give them the newest item ever!
-			{
-				//Log("Holy Give!");
-				FortInventory::GiveItem(PC, ResourceItemDefinition, DamageCount);
-			}
-			else
-			{
-				int MaxStackSize = ItemEntry->ItemDefinition->MaxStackSize;
-				int Count = ItemEntry->Count;
-
-				if (Count >= MaxStackSize)
-				{
-					//Log("SpawnPickup Full!");
-					SpawnPickup(ItemEntry->ItemDefinition, DamageCount, ItemEntry->LoadedAmmo, PC->MyFortPawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::Unset, PC->MyFortPawn);
-				}
-				else
-				{
-					//Log("Overflow Stack!");
-					int Space = MaxStackSize - Count;
-					int AddToStack = UKismetMathLibrary::min_0(Space, DamageCount);
-					int Overflow = DamageCount - AddToStack;
-
-					ItemEntry->Count += AddToStack;
-					PC->WorldInventory->Inventory.MarkItemDirty(*ItemEntry);
-
-					if (Overflow > 0) SpawnPickup(ItemEntry->ItemDefinition, Overflow, ItemEntry->LoadedAmmo, PC->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::Unset, PC->MyFortPawn);
-				}
-			}
-
-			FortInventory::Update(PC);
+		FFortItemEntry* ItemEntry = FortInventory::FindItemEntry(This, ItemGuid);
+		if (Pawn && ItemEntry) {
+			Pawn->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemEntry->ItemDefinition, ItemEntry->ItemGuid);
 		}
+
+		return ServerExecuteInventoryItemOG(This, ItemGuid);
 	}
 
 	void ServerCheat(AFortPlayerControllerAthena* PC, FString& Msg) {
@@ -178,166 +124,182 @@ namespace Controller
 		FortInventory::Update(PC, ItemEntry);
 	}
 
-	void ServerCreateBuildingActor(AFortPlayerControllerAthena* PC, const FCreateBuildingActorData& CreateBuildingData)
-	{
-		if (!PC || PC->IsInAircraft()) return;
-
-		AFortBroadcastRemoteClientInfo* ClientInfo = PC->BroadcastRemoteClientInfo;
-
-		UClass* BuildingClass = ClientInfo->RemoteBuildableClass.Get();
-
-		char Idk;
-		TArray<AActor*> BuildingActors;
-
-		bool bCantBuild = !CantBuild(UWorld::GetWorld(), BuildingClass, CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot, CreateBuildingData.bMirrored, &BuildingActors, &Idk);
-
-		if (bCantBuild)
-		{
-			UFortItemDefinition* ResourceDef = UFortKismetLibrary::K2_GetResourceItemDefinition(ClientInfo->RemoteBuildingMaterial);
-			if (ResourceDef)
-				FortInventory::RemoveItem(PC, ResourceDef, 10);
-
-			ABuildingSMActor* NewBuilding = SpawnActor<ABuildingSMActor>(CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot, PC, BuildingClass);
-			if (!NewBuilding) return;
-
-			NewBuilding->bPlayerPlaced = true;
-			NewBuilding->InitializeKismetSpawnedBuildingActor(NewBuilding, PC, true);
-			
-			if (AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState)
-			{
-				NewBuilding->TeamIndex = PlayerState->TeamIndex;
-				NewBuilding->Team = EFortTeam(PlayerState->TeamIndex);
-				NewBuilding->OnRep_Team();
-			}
-
-			for (int i = 0; i < BuildingActors.Num(); i++)
-				BuildingActors[i]->K2_DestroyActor();
-
-			BuildingActors.Free();
+	void (*ServerCreateBuildingActorOG)(AFortPlayerControllerAthena* PC, FCreateBuildingActorData& CreateBuildingData);
+	void ServerCreateBuildingActor(AFortPlayerControllerAthena* PC, FCreateBuildingActorData& CreateBuildingData) {
+		if (!PC) {
+			Log("No PC!");
+			return;
 		}
+
+		UClass* BuildingClass = PC->BroadcastRemoteClientInfo->RemoteBuildableClass.Get();
+
+		TArray<ABuildingSMActor*> BuildingsToRemove;
+		char BuildRestrictionFlag;
+		if (CantBuild(UWorld::GetWorld(), BuildingClass, CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot, CreateBuildingData.bMirrored, &BuildingsToRemove, &BuildRestrictionFlag))
+		{
+			Log("CantBuild!");
+			return;
+		}
+
+		auto ResourceItemDefinition = UFortKismetLibrary::GetDefaultObj()->K2_GetResourceItemDefinition(((ABuildingSMActor*)BuildingClass->DefaultObject)->ResourceType);
+		FortInventory::RemoveItem(PC, ResourceItemDefinition, 10);
+
+		ABuildingSMActor* PlacedBuilding = SpawnActor<ABuildingSMActor>(CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot, PC, BuildingClass);
+		PlacedBuilding->bPlayerPlaced = true;
+		PlacedBuilding->InitializeKismetSpawnedBuildingActor(PlacedBuilding, PC, true);
+		PlacedBuilding->TeamIndex = ((AFortPlayerStateAthena*)PC->PlayerState)->TeamIndex;
+		PlacedBuilding->Team = EFortTeam(PlacedBuilding->TeamIndex);
+
+		for (size_t i = 0; i < BuildingsToRemove.Num(); i++)
+		{
+			BuildingsToRemove[i]->K2_DestroyActor();
+		}
+		BuildingsToRemove.Free();
 	}
 
-	void ServerBeginEditingBuildingActor(AFortPlayerController* PC, ABuildingSMActor* BuildingActorToEdit)
+	void ServerBeginEditingBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToEdit)
 	{
-		if (!PC || PC->IsInAircraft() || !PC->MyFortPawn || !BuildingActorToEdit) return;
+		if (!BuildingActorToEdit || !BuildingActorToEdit->bPlayerPlaced || !PC->MyFortPawn)
+			return;
 
 		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
-		if (!PlayerState) return;
-
-		FFortItemEntry* EditToolEntries = FortInventory::FindItemEntry(PC, EditTool);
-		if (!EditToolEntries) return;
-
-		ServerExecuteInventoryItem(PC, EditToolEntries->ItemGuid);
-
+		BuildingActorToEdit->SetNetDormancy(ENetDormancy::DORM_Awake);
 		BuildingActorToEdit->EditingPlayer = PlayerState;
-		BuildingActorToEdit->OnRep_EditingPlayer();
-		BuildingActorToEdit->SetNetDormancy(ENetDormancy::DORM_Awake); //i think it should be awake??
 
-		AFortWeap_EditingTool* EditingTool = (AFortWeap_EditingTool*)PC->MyFortPawn->CurrentWeapon;
-		//if (!EditingTool) return;
+		for (int i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++)
+		{
+			auto Item = PC->WorldInventory->Inventory.ItemInstances[i];
+			if (Item->GetItemDefinitionBP()->IsA(UFortEditToolItemDefinition::StaticClass()))
+			{
+				PC->MyFortPawn->EquipWeaponDefinition((UFortWeaponItemDefinition*)Item->GetItemDefinitionBP(), Item->GetItemGuid());
+				break;
+			}
+		}
 
-		EditingTool->EditActor = BuildingActorToEdit;
-		EditingTool->OnRep_EditActor();
+		if (!PC->MyFortPawn->CurrentWeapon || !PC->MyFortPawn->CurrentWeapon->IsA(AFortWeap_EditingTool::StaticClass()))
+			return;
+
+		AFortWeap_EditingTool* EditTool = (AFortWeap_EditingTool*)PC->MyFortPawn->CurrentWeapon;
+		EditTool->EditActor = BuildingActorToEdit;
+		EditTool->OnRep_EditActor();
 	}
 
-	void ServerEndEditingBuildingActor(AFortPlayerController* PC, ABuildingSMActor* BuildingActorToStopEditing)
-	{
-		if (!PC || PC->IsInAircraft() || !PC->MyFortPawn || !BuildingActorToStopEditing || BuildingActorToStopEditing->EditingPlayer != PC->PlayerState) return;
-
+	void ServerEndEditingBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToStopEditing) {
+		if (!BuildingActorToStopEditing || !PC->MyFortPawn || BuildingActorToStopEditing->bDestroyed || BuildingActorToStopEditing->EditingPlayer != PC->PlayerState)
+			return;
+		BuildingActorToStopEditing->SetNetDormancy(ENetDormancy::DORM_DormantAll);
 		BuildingActorToStopEditing->EditingPlayer = nullptr;
-		BuildingActorToStopEditing->OnRep_EditingPlayer();
-		BuildingActorToStopEditing->SetNetDormancy(ENetDormancy::DORM_Initial); //Hopefully Initial works
+		for (size_t i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++)
+		{
+			auto Item = PC->WorldInventory->Inventory.ItemInstances[i];
+			if (Item->GetItemDefinitionBP()->IsA(UFortEditToolItemDefinition::StaticClass()))
+			{
+				PC->MyFortPawn->EquipWeaponDefinition((UFortWeaponItemDefinition*)Item->GetItemDefinitionBP(), Item->GetItemGuid());
+				break;
+			}
+		}
+		if (!PC->MyFortPawn->CurrentWeapon || !PC->MyFortPawn->CurrentWeapon->WeaponData || !PC->MyFortPawn->CurrentWeapon->IsA(AFortWeap_EditingTool::StaticClass()))
+			return;
 
-		AFortWeap_EditingTool* EditingTool = (AFortWeap_EditingTool*)PC->MyFortPawn->CurrentWeapon;
-		if (!EditingTool) return;
-
-		EditingTool->EditActor = nullptr;
-		EditingTool->OnRep_EditActor();
+		AFortWeap_EditingTool* EditTool = (AFortWeap_EditingTool*)PC->MyFortPawn->CurrentWeapon;
+		EditTool->EditActor = nullptr;
+		EditTool->OnRep_EditActor();
 	}
 
-	void ServerEditBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToEdit, TSubclassOf<ABuildingSMActor> NewBuildingClass, uint8 RotationIterations, bool bMirrored)
-	{
-		if (!PC || PC->IsInAircraft() || !PC->MyFortPawn || !BuildingActorToEdit || BuildingActorToEdit->bDestroyed) return;
+	void ServerEditBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToEdit, TSubclassOf<ABuildingSMActor> NewBuildingClass, uint8 RotationIterations, bool bMirrored) {
+		if (!BuildingActorToEdit || BuildingActorToEdit->EditingPlayer != PC->PlayerState || !NewBuildingClass.Get() || BuildingActorToEdit->bDestroyed)
+			return;
 
-		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
-		if (!PlayerState || BuildingActorToEdit->EditingPlayer != PlayerState) return;
-
+		BuildingActorToEdit->SetNetDormancy(ENetDormancy::DORM_DormantAll);
 		BuildingActorToEdit->EditingPlayer = nullptr;
-		BuildingActorToEdit->OnRep_EditingPlayer();
-		BuildingActorToEdit->SetNetDormancy(ENetDormancy::DORM_Initial);
+		ABuildingSMActor* EditedBuildingActor = ReplaceBuildingActor(BuildingActorToEdit, 1, NewBuildingClass.Get(), 0, RotationIterations, bMirrored, PC);
+		if (EditedBuildingActor)
+			EditedBuildingActor->bPlayerPlaced = true;
+	}
 
-		ABuildingSMActor* NewBuilding = ReplaceBuildingActor(BuildingActorToEdit, 1, NewBuildingClass.Get(), 0, RotationIterations, bMirrored, PC);
-		if (!NewBuilding) return;
+	void ServerRepairBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToRepair) {
+		auto FortKismet = (UFortKismetLibrary*)UFortKismetLibrary::StaticClass()->DefaultObject;
+		if (!BuildingActorToRepair)
+			return;
 
-		NewBuilding->bPlayerPlaced = true;
-		NewBuilding->InitializeKismetSpawnedBuildingActor(NewBuilding, PC, true);
+		if (BuildingActorToRepair->EditingPlayer)
+		{
+			return;
+		}
 
-		NewBuilding->TeamIndex = PlayerState->TeamIndex;
-		NewBuilding->Team = EFortTeam(PlayerState->TeamIndex);
-		NewBuilding->OnRep_Team();
+		float BuildingHealthPercent = BuildingActorToRepair->GetHealthPercent();
+		float BuildingCost = 10;
+		float RepairCostMultiplier = 0.75;
+
+		float BuildingHealthPercentLost = 1.0f - BuildingHealthPercent;
+		float RepairCostUnrounded = (BuildingCost * BuildingHealthPercentLost) * RepairCostMultiplier;
+		float RepairCost = std::floor(RepairCostUnrounded > 0 ? RepairCostUnrounded < 1 ? 1 : RepairCostUnrounded : 0);
+		if (RepairCost < 0)
+			return;
+
+		auto ResourceDef = FortKismet->K2_GetResourceItemDefinition(BuildingActorToRepair->ResourceType);
+		if (!ResourceDef)
+			return;
+
+		if (!PC->bBuildFree)
+		{
+			FortInventory::RemoveItem(PC, ResourceDef, (int)RepairCost);
+		}
+
+		BuildingActorToRepair->RepairBuilding(PC, (int)RepairCost);
 	}
 
 	void (*ClientOnPawnDiedOG)(AFortPlayerControllerZone* PC, const FFortPlayerDeathReport& DeathReport);
 	void ClientOnPawnDied(AFortPlayerControllerAthena* PC, const FFortPlayerDeathReport& DeathReport)
 	{
-		Log("ClientOnPawnDied Function Called!");
+		auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
+		auto GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
 
-		AFortGameModeAthena* GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
-		AFortGameStateAthena* GameState = (AFortGameStateAthena*)GameMode->GameState;
-		if (!GameMode || !GameState) return ClientOnPawnDiedOG(PC, DeathReport);
+		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
+		if (!PlayerState) {
+			return;
+		}
+		FVector DeathLocation = PC->Pawn->K2_GetActorLocation();
+		Log(PlayerState->GetPlayerName().ToString() + " Died!");
 
-		if (!PC || !PC->MyFortPawn) return ClientOnPawnDiedOG(PC, DeathReport);
-
-		AFortPlayerStateAthena* DeadPlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
-		if (!DeadPlayerState) return ClientOnPawnDiedOG(PC, DeathReport);
-
-		AFortPlayerPawnAthena* KillerPawn = (AFortPlayerPawnAthena*)DeathReport.KillerPawn;
-		AFortPlayerStateAthena* KillerPlayerState = (AFortPlayerStateAthena*)DeathReport.KillerPlayerState;
-		AFortPlayerController* KillerController = KillerPawn ? (AFortPlayerController*)KillerPawn->Controller : nullptr;
-
-		bool bIdk = KillerPawn == PC->MyFortPawn;
-
-	    FDeathInfo& DeathInfo = DeadPlayerState->DeathInfo;
-		
-		DeathInfo.bDBNO = PC->MyFortPawn->bWasDBNOOnDeath;
-		DeathInfo.bInitialized = true;
-		DeathInfo.DeathLocation = PC->Pawn->K2_GetActorLocation();
-		DeathInfo.DeathTags = DeathReport.Tags;
-		DeathInfo.Downer = KillerPlayerState;
-		DeathInfo.Distance = (KillerPawn ? KillerPawn->GetDistanceTo(PC->Pawn) : ((AFortPlayerPawnAthena*)PC->Pawn)->LastFallDistance);
-		DeadPlayerState->DeathInfo.FinisherOrDowner = DeathReport.KillerPlayerState ? DeathReport.KillerPlayerState : PC->PlayerState;
-		DeathInfo.DeathCause = DeadPlayerState->ToDeathCause(DeathInfo.DeathTags, DeathInfo.bDBNO);
-		DeadPlayerState->OnRep_DeathInfo();
-
-		PC->MyFortPawn->ForceNetUpdate();
-
-		for (int i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
+		if (!GameState->IsRespawningAllowed(PlayerState))
 		{
-			FFortItemEntry* ItemEntry = &PC->WorldInventory->Inventory.ReplicatedEntries[i];
-			if (!ItemEntry) continue;
-
-			if (FortInventory::GetQuickBars(ItemEntry->ItemDefinition) == EFortQuickBars::Primary ||
-				ItemEntry->ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass()) || 
-				ItemEntry->ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) || 
-				ItemEntry->ItemDefinition->IsA(UFortTrapItemDefinition::StaticClass()))
+			if (PC && PC->WorldInventory)
 			{
-				FVector Drop = PC->MyFortPawn->K2_GetActorLocation() + PC->MyFortPawn->GetActorForwardVector() * 100.0f;
-				SpawnPickup(ItemEntry->ItemDefinition, ItemEntry->Count, ItemEntry->LoadedAmmo, Drop, EFortPickupSourceTypeFlag::Tossed, EFortPickupSpawnSource::PlayerElimination, PC->MyFortPawn);
+				for (size_t i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
+				{
+					if (((UFortWorldItemDefinition*)PC->WorldInventory->Inventory.ReplicatedEntries[i].ItemDefinition)->bCanBeDropped)
+					{
+						SpawnPickup(PC->WorldInventory->Inventory.ItemInstances[i]->ItemEntry.ItemDefinition, PC->WorldInventory->Inventory.ItemInstances[i]->ItemEntry.Count, PC->WorldInventory->Inventory.ItemInstances[i]->ItemEntry.LoadedAmmo, DeathLocation, EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::PlayerElimination, PC->MyFortPawn);
+					}
+				}
 			}
+
+			FAthenaRewardResult Result;
+			PC->ClientSendEndBattleRoyaleMatchForPlayer(true, Result);
+
+			FAthenaMatchStats Stats;
+			FAthenaMatchTeamStats TeamStats;
+
+			if (PlayerState)
+			{
+				PlayerState->Place = GameMode->AliveBots.Num() + GameMode->AlivePlayers.Num();
+				PlayerState->OnRep_Place();
+			}
+
+			for (size_t i = 0; i < 20; i++)
+			{
+				Stats.Stats[i] = 0;
+			}
+
+			Stats.Stats[3] = PlayerState->KillScore;
+
+			TeamStats.Place = PlayerState->Place;
+			TeamStats.TotalPlayers = GameState->TotalPlayers;
+
+			PC->ClientSendMatchStatsForPlayer(Stats);
+			PC->ClientSendTeamStatsForPlayer(TeamStats);
 		}
-
-		PC->WorldInventory->Inventory.ReplicatedEntries.Free();
-		FortInventory::Update(PC);
-
-		RemoveFromAlivePlayers(GameMode, PC, DeadPlayerState, PC->MyFortPawn, nullptr, (uint8)DeathInfo.DeathCause, 0);
-
-		if (!bIdk && KillerPlayerState) //opps???
-		{
-			KillerPlayerState->KillScore++;
-			KillerPlayerState->OnRep_Kills();
-		}
-
-		//Log(std::format("PlayerName={} Killed PlayerName={}", KillerPlayerState->GetPlayerName().ToString(), DeadPlayerState->GetPlayerName().ToString()).c_str());
 
 		return ClientOnPawnDiedOG(PC, DeathReport);
 	}
@@ -366,6 +328,8 @@ namespace Controller
 		AFortPlayerControllerAthena* PC = (AFortPlayerControllerAthena*)ComponentInteraction->GetOwner();
 		if (!PC || !PC->MyFortPawn) return ServerAttemptInteractOG(ComponentInteraction, ReceivingActor, InteractComponent, InteractType, OptionalObjectData);
 
+		Log("ServerAttemptInteract: " + ReceivingActor->Class->GetFullName());
+
 		if (ReceivingActor->Class->GetFullName().contains("AthenaSupplyDrop"))
 		{
 			std::vector<FFortItemEntry> LootDrops = Looting::PickLootDrops(UKismetStringLibrary::Conv_StringToName(L"Loot_AthenaSupplyDrop"));
@@ -387,20 +351,20 @@ namespace Controller
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x1F19990), ServerLoadingScreenDropped, (LPVOID*)&ServerLoadingScreenDroppedOG);
 
-		HookVTable<AFortPlayerControllerAthena>(0x1FE, ServerExecuteInventoryItem);
-
-		MH_CreateHook((LPVOID)(ImageBase + 0x1CC36A0), OnDamageServer, nullptr);
+		HookVTable<AFortPlayerControllerAthena>(0x1FE, ServerExecuteInventoryItem, (LPVOID*)&ServerExecuteInventoryItemOG);
 
 		HookVTable<AFortPlayerControllerAthena>(0x1BC, ServerCheat);
 		HookVTable<AFortPlayerControllerAthena>(0x210, ServerAttemptInventoryDrop);
 		HookVTable<AFortPlayerControllerAthena>(0x224, ServerCreateBuildingActor);
 		HookVTable<AFortPlayerControllerAthena>(0x22A, ServerBeginEditingBuildingActor);
 		HookVTable<AFortPlayerControllerAthena>(0x228, ServerEndEditingBuildingActor);
+		HookVTable<AFortPlayerControllerAthena>(0x226, ServerEditBuildingActor);
+		HookVTable<AFortPlayerControllerAthena>(0x220, ServerRepairBuildingActor);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x1F34E50), ClientOnPawnDied, (LPVOID*)&ClientOnPawnDiedOG);
 
 		HookVTable<AFortPlayerStateAthena>(0x103, ServerSetInAircraft);
-		HookVTable<UFortControllerComponent_Interaction>(0x80, ServerAttemptInteract, (LPVOID*)&ServerAttemptInteractOG);
+		HookVTable<UFortControllerComponent_Interaction>(0x81, ServerAttemptInteract, (LPVOID*)&ServerAttemptInteractOG);
 
 		Log("Controller Hooked!");
 	}

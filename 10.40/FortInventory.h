@@ -28,6 +28,9 @@ namespace FortInventory
 		NewInstance->ItemEntry.Count = Count;
 		NewInstance->ItemEntry.LoadedAmmo = LoadedAmmo;
 		PC->WorldInventory->Inventory.ReplicatedEntries.Add(NewInstance->ItemEntry);
+
+		Update(PC, &NewInstance->ItemEntry);
+
 		return NewInstance;
 	}
 

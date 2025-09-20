@@ -105,6 +105,12 @@
     <ClInclude Include="Misc.h">
       <Filter>Hooks</Filter>
     </ClInclude>
+    <ClInclude Include="FortWeapon.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="BuildingActor.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

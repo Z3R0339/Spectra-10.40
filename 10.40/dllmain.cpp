@@ -4,11 +4,15 @@
 #include "Misc.h"
 
 #include "GameMode.h"
-#include "Controller.h"
 
+#include "Controller.h"
 #include "AbilitySystemComponent.h"
 #include "Looting.h"
 #include "Pawn.h"
+
+#include "FortWeapon.h"
+
+#include "BuildingActor.h"
 
 #include "Net.h"
 #include "NetDriver.h"
@@ -45,6 +49,10 @@ void Hook() {
     AbilitySystemComponent::HookAll();
     Looting::HookAll();
     Pawn::HookAll();
+
+    FortWeapon::HookAll();
+
+    BuildingActor::HookAll();
 
     Net::HookAll();
     NetDriver::HookAll();
