@@ -3,7 +3,7 @@
 #include "FortInventory.h"
 #include "FortAIBotControllerAthena.h"
 
-namespace FortPlayerPawn
+namespace Pawn
 {
 	void ServerHandlePickup(AFortPlayerPawn* PlayerPawn, AFortPickup* Pickup, float InFlyTime, const struct FVector& InStartDirection, bool bPlayPickupSound)
 	{
@@ -303,28 +303,19 @@ namespace FortPlayerPawn
 	{
 		if (!PhysicsPawn) return;
 
-		UPrimitiveComponent* Component = (UPrimitiveComponent*)PhysicsPawn->RootComponent;
-		if (!Component) return;
+		if (UPrimitiveComponent* RootComponent = Cast<UPrimitiveComponent>(PhysicsPawn->RootComponent))
+		{
+			FRotator RealRotation = Rotator(InState.Rotation);
 
-		FQuat Rotation = InState.Rotation;
+			RealRotation.Yaw = FRotator::UnwindDegrees(RealRotation.Yaw);
 
-		Rotation.W -= 2.5f;
-		Rotation.Y /= 0.3f;
-		Rotation.Z -= -2.0f;
-		Rotation.W /= -1.2f;
+			RealRotation.Pitch = 0;
+			RealRotation.Roll = 0;
 
-		FTransform Transform{};
-
-		Transform.Translation = InState.Translation;
-		Transform.Rotation = Rotation;
-		Transform.Scale3D = FVector{ 1,1,1 };
-
-		Component->K2_SetWorldTransform(Transform, false, nullptr, true);
-
-		Component->bComponentToWorldUpdated = true;
-
-		Component->SetPhysicsLinearVelocity(InState.LinearVelocity, false, FName());
-		Component->SetPhysicsAngularVelocity(InState.AngularVelocity, false, FName());
+			RootComponent->K2_SetWorldLocationAndRotation(InState.Translation, RealRotation, false, nullptr, true);
+			RootComponent->SetPhysicsLinearVelocity(InState.LinearVelocity, 0, FName(0));
+			RootComponent->SetPhysicsAngularVelocityInDegrees(InState.AngularVelocity, 0, FName(0));
+		}
 	}
 
 	void (*ServerSendZiplineStateOG)(AFortPlayerPawn* PlayerPawn, const FZiplinePawnState& InZiplineState);
@@ -358,14 +349,16 @@ namespace FortPlayerPawn
 
 	void HookAll()
 	{
-		//HookVTable<APlayerPawn_Athena_C>(0x1C6, ServerHandlePickup); //LogRep: Error: ReceivedRPC: RPC_GetLastFailedReason: ServerHandlePickup_Validate
+		HookVTable<APlayerPawn_Athena_C>(0x1C7, ServerHandlePickup);
 
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1C66A30), OnReload, reinterpret_cast<void**>(&OnReloadOG));
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x16F7D10), CompletePickupAnimation, reinterpret_cast<void**>(&CompletePickupAnimationOG));
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EF0A80), NetMulticast_Athena_BatchedDamageCues, reinterpret_cast<void**>(&NetMulticast_Athena_BatchedDamageCuesOG));
-		//MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1F3F740), OnCapsuleBeginOverlap, reinterpret_cast<void**>(&OnCapsuleBeginOverlapOG));
-		//MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EFAC60), ServerMove, reinterpret_cast<void**>(&ServerMoveOG));
+		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1F3F740), OnCapsuleBeginOverlap, reinterpret_cast<void**>(&OnCapsuleBeginOverlapOG));
+		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EFAC60), ServerMove, nullptr);
 
 		HookVTable<APlayerPawn_Athena_C>(0x1D2, ServerSendZiplineState, reinterpret_cast<void**>(&ServerSendZiplineStateOG));
+
+		Log("Pawn Hooked!");
 	}
 }

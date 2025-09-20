@@ -1,7 +1,7 @@
 #pragma once
 #include "framework.h"
 
-namespace FortAbilitySystemComponent
+namespace AbilitySystemComponent
 {
 	//https://github.com/EpicGames/UnrealEngine/blob/87f8792983fb4228be213b15b57f675dfe143d16/Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Private/AbilitySystemComponent_Abilities.cpp#L584
 	FGameplayAbilitySpec* FindAbilitySpecFromHandle(UAbilitySystemComponent* AbilitySystemComponent, FGameplayAbilitySpecHandle Handle)

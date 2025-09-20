@@ -271,15 +271,32 @@ namespace FortAIBotControllerAthena
 	void (*OnActorBumpOG)(UPathFollowingComponent* Comp, AActor* SelfActor, AActor* OtherActor, const FVector& NormalImpulse, FHitResult& Hit);
 	void OnActorBump(UFortAthenaAIBotPathFollowingComponent* Comp, AActor* SelfActor, AActor* OtherActor, const FVector& NormalImpulse, FHitResult& Hit)
 	{
-		for (PlayerBots::PlayerBot* bot : PlayerBots::PlayerBotArray)
-		{
-			if (bot->PC == Comp->BotController)
+		if (OtherActor || OtherActor->IsA(ABuildingActor::StaticClass())) {
+			for (PlayerBots::PlayerBot* bot : PlayerBots::PlayerBotArray)
 			{
-				if (bot->BotState < PlayerBots::EBotState::Landed) {
-					break;
-				}
+				if (bot->PC == Comp->BotController)
+				{
+					if (bot->BotState < PlayerBots::EBotState::Landed) {
+						break;
+					}
 
-				if (bot->bPotentiallyUnderAttack) {
+					if (bot->bPotentiallyUnderAttack) {
+						if (!bot->Pawn->bIsCrouched && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.025f)) {
+							bot->Pawn->Crouch(false);
+						}
+
+						if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.05f)) {
+							bot->Pawn->UnCrouch(false);
+							bot->Pawn->Jump();
+						}
+						break;
+					}
+					bot->bPauseTicking = true;
+					if (!bot->IsPickaxeEquiped()) {
+						bot->EquipPickaxe();
+					}
+					bot->Pawn->PawnStartFire(0);
+
 					if (!bot->Pawn->bIsCrouched && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.025f)) {
 						bot->Pawn->Crouch(false);
 					}
@@ -288,38 +305,24 @@ namespace FortAIBotControllerAthena
 						bot->Pawn->UnCrouch(false);
 						bot->Pawn->Jump();
 					}
+
+					bot->ForceStrafe(true);
+
+					bot->Pawn->PawnStopFire(0);
+					bot->bPauseTicking = false;
 					break;
 				}
-				bot->bPauseTicking = true;
-				if (!bot->IsPickaxeEquiped()) {
-					bot->EquipPickaxe();
-				}
-				bot->Pawn->PawnStartFire(0);
-
-				if (!bot->Pawn->bIsCrouched && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.025f)) {
-					bot->Pawn->Crouch(false);
-				}
-
-				if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.05f)) {
-					bot->Pawn->UnCrouch(false);
-					bot->Pawn->Jump();
-				}
-
-				bot->ForceStrafe(true);
-
-				bot->Pawn->PawnStopFire(0);
-				bot->bPauseTicking = false;
-				break;
 			}
 		}
 
 		return OnActorBumpOG(Comp, SelfActor, OtherActor, NormalImpulse, Hit);
 	}
 
-	// Doesent exist in this version ig, ggs :fire!
-	void (*OnPossessedPawnDiedOG)(AFortAthenaAIBotController* PC, AActor* DamagedActor, float Damage, AController* InstigatedBy, AActor* DamageCauser, FVector HitLocation, UPrimitiveComponent* HitComp, FName BoneName, FVector Momentum);
-	void OnPossessedPawnDied(AFortAthenaAIBotController* PC, AActor* DamagedActor, float Damage, AController* InstigatedBy, AActor* DamageCauser, FVector HitLocation, UPrimitiveComponent* HitComp, FName BoneName, FVector Momentum)
+	void (*AITargetDiedOG)(AFortPlayerPawn* This, class AActor* DamagedActor, float Damage, class AController* InstigatedBy, class AActor* DamageCauser, const struct FVector& HitLocation, SDK::UPrimitiveComponent* FHitComponent, class FName BoneName, const struct FVector& Momentum);
+	void AITargetDied(AFortPlayerPawn* This, class AActor* DamagedActor, float Damage, class AController* InstigatedBy, class AActor* DamageCauser, const struct FVector& HitLocation, UPrimitiveComponent* FHitComponent, class FName BoneName, const struct FVector& Momentum)
 	{
+		Log("AITargetDied Called!");
+		AFortAthenaAIBotController* PC = (AFortAthenaAIBotController*)This->Controller;
 		if (!PC) {
 			return;
 		}
@@ -329,6 +332,7 @@ namespace FortAIBotControllerAthena
 			{
 				if (bot && bot->PC && bot->PC == PC)
 				{
+					Log("Found Dead Bot!");
 					break;
 				}
 			}
@@ -342,7 +346,7 @@ namespace FortAIBotControllerAthena
 			SpawnPickup(Def, 0, 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::PlayerElimination);
 		}
 
-		return OnPossessedPawnDiedOG(PC, DamagedActor, Damage, InstigatedBy, DamageCauser, HitLocation, HitComp, BoneName, Momentum);
+		return AITargetDiedOG(This, DamagedActor, Damage, InstigatedBy, DamageCauser, HitLocation, FHitComponent, BoneName, Momentum);
 	}
 
 	void (*OnAgentDBNOOG)(AFortAthenaAIBotController* AI, AFortPawn* InPlayer, bool bInIsDBNO);
@@ -361,8 +365,12 @@ namespace FortAIBotControllerAthena
 
 		//HookVTable<UAthenaNavSystem>(44, InitializeForWorld, (LPVOID*)&InitializeForWorldOG);
 
-		MH_CreateHook((LPVOID)(ImageBase + 0x386A430), OnActorBump, (LPVOID*)&OnActorBumpOG);
+		//MH_CreateHook((LPVOID)(ImageBase + 0x386A430), OnActorBump, (LPVOID*)&OnActorBumpOG);
+		HookVTable<UPathFollowingComponent>(0x8D, OnActorBump, (LPVOID*)&OnActorBumpOG);
+		
 		//MH_CreateHook((LPVOID)(ImageBase + 0x1D2CED0), OnAgentDBNO, (LPVOID*)&OnAgentDBNOOG); //if we needed it
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x1958350), AITargetDied, (LPVOID*)&AITargetDiedOG);
 
 		Log("Hooked FortAIBotControllerAthena!");
 	}

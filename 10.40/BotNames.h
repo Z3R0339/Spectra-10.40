@@ -104,4 +104,7 @@ inline std::vector<std::string> BotDisplayNames = {
     "SypherPK.",
     "Tejo-TV.",
     "billoute",
+    "Specx",
+    "Charles",
+    "NickVX"
 };

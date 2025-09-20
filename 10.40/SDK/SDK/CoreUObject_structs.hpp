@@ -651,6 +651,37 @@ public:
 	float                                         Pitch;                                             // 0x0000(0x0004)(Edit, BlueprintVisible, ZeroConstructor, SaveGame, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 	float                                         Yaw;                                               // 0x0004(0x0004)(Edit, BlueprintVisible, ZeroConstructor, SaveGame, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 	float                                         Roll;                                              // 0x0008(0x0004)(Edit, BlueprintVisible, ZeroConstructor, SaveGame, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+
+public:
+	static double UnwindDegrees(double Angle)
+	{
+		Angle = fmod(Angle, 360.0f);
+
+		if (Angle < 0.)
+			Angle += 360.;
+
+		if (Angle > 180.)
+			Angle -= 360.;
+
+		return Angle;
+	}
+
+	static double ClampAxis(double Angle)
+	{
+		Angle = fmod(Angle, 360.);
+
+		if (Angle < 0.)
+			Angle += 360.;
+		return Angle;
+	}
+
+	static double NormalizeAxis(double Angle)
+	{
+		Angle = ClampAxis(Angle);
+
+		if (Angle > 180.) Angle -= 360.;
+		return Angle;
+	}
 };
 
 // ScriptStruct CoreUObject.LinearColor

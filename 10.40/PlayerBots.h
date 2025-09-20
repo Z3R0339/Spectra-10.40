@@ -1,5 +1,7 @@
 #pragma once
 #include "framework.h"
+
+#include "FortInventory.h"
 #include "Looting.h"
 
 namespace PlayerBots {
@@ -1473,7 +1475,7 @@ namespace PlayerBots {
                 bot->PC->K2_ClearFocus();
             }
 
-            if (bot->tick_counter % 50 == 0) {
+            if (bot->tick_counter % 150 == 0) {
                 bot->NearestPlayerPawn = bot->GetNearestPawn();
 
                 if (!bot->Pawn->bIsDBNO) {
@@ -2035,18 +2037,6 @@ namespace PlayerBots {
             if (Bot->Pawn->IsDead()) {
                 for (int i = 0; i < PlayerBotArray.size(); i++) {
                     if (PlayerBotArray[i]->Pawn == Bot->Pawn) {
-                        {
-                            for (int32 i = 0; i < Bot->PC->Inventory->Inventory.ReplicatedEntries.Num(); i++) {
-                                FFortItemEntry ItemEntry = Bot->PC->Inventory->Inventory.ReplicatedEntries[i];
-                                UFortItemDefinition* ItemDef = ItemEntry.ItemDefinition;
-                                if (!ItemDef)
-                                    continue;
-                                if (!((UFortWorldItemDefinition*)ItemDef)->bCanBeDropped)
-                                    continue;
-                                SpawnPickup(ItemDef, ItemEntry.Count, ItemEntry.LoadedAmmo, Bot->LastUpdatedBotLocation, EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::PlayerElimination);
-                            }
-                        }
-
                         delete PlayerBotArray[i];
                         PlayerBotArray.erase(PlayerBotArray.begin() + i);
                         Log("Freed a dead bot from the array!");

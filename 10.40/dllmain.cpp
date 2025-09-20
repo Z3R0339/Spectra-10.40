@@ -1,12 +1,12 @@
 #include "framework.h"
-#include "Hooks.h"
+#include "PE.h"
 
-#include "FortGameModeAthena.h"
-#include "FortPlayerControllerAthena.h"
+#include "GameMode.h"
+#include "Controller.h"
 #include "Net.h"
-#include "FortAbilitySystemComponent.h"
+#include "AbilitySystemComponent.h"
 #include "Looting.h"
-#include "FortPlayerPawn.h"
+#include "Pawn.h"
 #include "FortAIBotControllerAthena.h"
 
 void InitConsole() {
@@ -30,13 +30,13 @@ void LoadWorld() {
 }
 
 void Hook() {
-    FortGameModeAthena::HookAll();
+    GameMode::HookAll();
     Net::HookAll();
-    FortPlayerControllerAthena::HookAll();
-    FortAbilitySystemComponent::HookAll();
+    Controller::HookAll();
+    AbilitySystemComponent::HookAll();
     Looting::HookAll();
-    FortPlayerPawn::HookAll();
-    Hooks::HookAll();
+    Pawn::HookAll();
+    PE::HookAll();
     FortAIBotControllerAthena::HookAll();
     MH_EnableHook(MH_ALL_HOOKS);
 }
@@ -74,6 +74,8 @@ DWORD Main(LPVOID) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     WaitForLogin();
+
+    UKismetSystemLibrary::ExecuteConsoleCommand(UWorld::GetWorld(), L"log LogPackageLocalizationCache", nullptr);
 
     Hook();
 

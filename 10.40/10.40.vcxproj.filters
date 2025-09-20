@@ -57,35 +57,29 @@
     <ClInclude Include="Globals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FortGameModeAthena.h">
+    <ClInclude Include="GameMode.h">
       <Filter>Hooks</Filter>
     </ClInclude>
     <ClInclude Include="Net.h">
       <Filter>Hooks</Filter>
     </ClInclude>
-    <ClInclude Include="FortPlayerControllerAthena.h">
-      <Filter>Hooks</Filter>
-    </ClInclude>
-    <ClInclude Include="FortInventory.h">
+    <ClInclude Include="Controller.h">
       <Filter>Hooks</Filter>
     </ClInclude>
     <ClInclude Include="SDK\SDK\CoreUObject_structs.hpp">
       <Filter>SDK\SDK</Filter>
     </ClInclude>
-    <ClInclude Include="FortAbilitySystemComponent.h">
+    <ClInclude Include="AbilitySystemComponent.h">
       <Filter>Hooks</Filter>
     </ClInclude>
     <ClInclude Include="Looting.h">
       <Filter>Hooks</Filter>
     </ClInclude>
-    <ClInclude Include="FortPlayerPawn.h">
+    <ClInclude Include="Pawn.h">
       <Filter>Hooks</Filter>
     </ClInclude>
     <ClInclude Include="SDK\SDK\CoreUObject_classes.hpp">
       <Filter>SDK\SDK</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooks.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FortAIBotControllerAthena.h">
       <Filter>Hooks</Filter>
@@ -94,6 +88,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BotNames.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vehicles.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PE.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="FortInventory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

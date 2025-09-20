@@ -137,15 +137,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BotNames.h" />
-    <ClInclude Include="FortAbilitySystemComponent.h" />
+    <ClInclude Include="AbilitySystemComponent.h" />
     <ClInclude Include="FortAIBotControllerAthena.h" />
-    <ClInclude Include="FortGameModeAthena.h" />
+    <ClInclude Include="GameMode.h" />
     <ClInclude Include="FortInventory.h" />
-    <ClInclude Include="FortPlayerControllerAthena.h" />
-    <ClInclude Include="FortPlayerPawn.h" />
+    <ClInclude Include="Controller.h" />
+    <ClInclude Include="Pawn.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Globals.h" />
-    <ClInclude Include="Hooks.h" />
+    <ClInclude Include="PE.h" />
     <ClInclude Include="Looting.h" />
     <ClInclude Include="Net.h" />
     <ClInclude Include="PlayerBots.h" />
@@ -161,6 +161,7 @@
     <ClInclude Include="SDK\SDK\FortniteGame_structs.hpp" />
     <ClInclude Include="SDK\UnrealContainers.hpp" />
     <ClInclude Include="SDK\UtfN.hpp" />
+    <ClInclude Include="Vehicles.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />

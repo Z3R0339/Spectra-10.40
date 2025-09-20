@@ -17,8 +17,6 @@ namespace Net
 		return (int)ENetMode::DedicatedServer;
 	}
 
-	int32(*ServerReplicateActors)(UReplicationDriver*, float DeltaSeconds) = decltype(ServerReplicateActors)(ImageBase + 0xA33E90); //UReplicationGraph
-
 	void (*TickFlushOG)(UNetDriver*, float DeltaSeconds);
 	void TickFlush(UNetDriver* Driver, float DeltaSeconds)
 	{
@@ -33,7 +31,7 @@ namespace Net
 			&& (GameMode->AlivePlayers.Num() + GameMode->AliveBots.Num()) < GameMode->GameSession->MaxPlayers
 			&& GameMode->AliveBots.Num() < Globals::MaxBotsToSpawn && Globals::bBotsEnabled)
 		{
-			if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.045f))
+			if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.05f))
 			{
 				FortAIBotControllerAthena::SpawnPlayerBot();
 			}

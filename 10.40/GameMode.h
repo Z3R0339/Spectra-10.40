@@ -2,7 +2,10 @@
 #include "framework.h"
 #include "FortAIBotControllerAthena.h"
 
-namespace FortGameModeAthena
+#include "FortInventory.h"
+#include "AbilitySystemComponent.h"
+
+namespace GameMode
 {
 	bool (*ReadyToStartMatchOG)(AGameMode*);
 	bool ReadyToStartMatch(AFortGameModeAthena* GameMode)
@@ -179,34 +182,23 @@ namespace FortGameModeAthena
 
 	APawn* SpawnDefaultPawnFor(AGameModeBase* GameMode, AController* NewPlayer, AActor* StartSpot)
 	{
-		/*AFortPlayerControllerAthena* PC = (AFortPlayerControllerAthena*)NewPlayer;
-		AFortPlayerStateAthena* PS = (AFortPlayerStateAthena*)PC->PlayerState;
-		AFortPlayerPawnAthena* NewPawn = (AFortPlayerPawnAthena*)GameMode->SpawnDefaultPawnAtTransform(NewPlayer, StartSpot->GetTransform());
+		AFortPlayerControllerAthena* PC = (AFortPlayerControllerAthena*)NewPlayer;
+		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
+		AFortPlayerPawnAthena* Pawn = (AFortPlayerPawnAthena*)GameMode->SpawnDefaultPawnAtTransform(NewPlayer, StartSpot->GetTransform());
 
-		PC->bHasClientFinishedLoading = true;
-		PC->bHasServerFinishedLoading = true;
-		PC->OnRep_bHasServerFinishedLoading();
+		ApplyCharacterCustomization(PlayerState, Pawn);
 
-		PS->bHasFinishedLoading = true;
-		PS->bHasStartedPlaying = true;
-		PS->OnRep_bHasStartedPlaying();
-
-		NewPawn->CosmeticLoadout = PC->CosmeticLoadoutPC;
-		NewPawn->OnRep_CosmeticLoadout();
-
-		PS->ForceNetUpdate();
-		NewPawn->ForceNetUpdate();
-		PC->ForceNetUpdate();
-
-		ApplyCharacterCustomization(PS, NewPawn);*/
-
-		return GameMode->SpawnDefaultPawnAtTransform(NewPlayer, StartSpot->GetTransform());
+		return Pawn;
 	}
 
-	void HandleStartingNewPlayer(AGameModeBase* GameMode, AFortPlayerControllerAthena* NewPlayer)
+	void (*HandleStartingNewPlayerOG)(AGameModeBase* This, AFortPlayerControllerAthena* NewPlayer);
+	void HandleStartingNewPlayer(AGameModeBase* This, AFortPlayerControllerAthena* NewPlayer)
 	{
+		AFortGameModeAthena* GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
+		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+
 		APlayerPawn_Athena_C* NewPawn = SpawnAActor<APlayerPawn_Athena_C>(NewPlayer->K2_GetActorLocation(), NewPlayer->K2_GetActorRotation());
-		AFortPlayerStateAthena* PS = (AFortPlayerStateAthena*)NewPlayer->PlayerState;
+		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)NewPlayer->PlayerState;
 
 		NewPlayer->Possess(NewPawn);
 
@@ -217,21 +209,48 @@ namespace FortGameModeAthena
 		NewPlayer->bHasServerFinishedLoading = true;
 		NewPlayer->OnRep_bHasServerFinishedLoading();
 
-		PS->bHasFinishedLoading = true;
-		PS->bHasStartedPlaying = true;
-		PS->OnRep_bHasStartedPlaying();
-
-		//NewPawn->CosmeticLoadout = PC->CosmeticLoadoutPC;
-		//NewPawn->OnRep_CosmeticLoadout();
-
-		PS->ForceNetUpdate();
-		NewPawn->ForceNetUpdate();
-		NewPlayer->ForceNetUpdate();
-
-		//ApplyCharacterCustomization(PS, NewPawn);
+		PlayerState->bHasFinishedLoading = true;
+		PlayerState->bHasStartedPlaying = true;
+		PlayerState->OnRep_bHasStartedPlaying();
 
 		NewPlayer->ClientQuickBars = SpawnAActor<AFortQuickBars>();
 		NewPlayer->ClientQuickBars->SetOwner(NewPlayer);
+
+		PlayerState->SquadId = PlayerState->TeamIndex - 3;
+		PlayerState->OnRep_SquadId();
+
+		FGameMemberInfo Member;
+		Member.MostRecentArrayReplicationKey = -1;
+		Member.ReplicationID = -1;
+		Member.ReplicationKey = -1;
+		Member.TeamIndex = PlayerState->TeamIndex;
+		Member.SquadId = PlayerState->SquadId;
+		Member.MemberUniqueId = PlayerState->UniqueId;
+
+		GameState->GameMemberInfoArray.Members.Add(Member);
+		GameState->GameMemberInfoArray.MarkItemDirty(Member);
+
+		if (!NewPlayer->MatchReport)
+		{
+			NewPlayer->MatchReport = (UAthenaPlayerMatchReport*)UGameplayStatics::SpawnObject(UAthenaPlayerMatchReport::StaticClass(), NewPlayer);
+		}
+
+		for (int i = 0; i < GameMode->StartingItems.Num(); i++)
+			FortInventory::GiveItem(NewPlayer, GameMode->StartingItems[i].Item, GameMode->StartingItems[i].Count);
+
+		UAthenaPickaxeItemDefinition* PickaxeDefinition = nullptr;
+		FFortAthenaLoadout& CosmeticLoadoutPC = NewPlayer->CosmeticLoadoutPC;
+
+		PickaxeDefinition = CosmeticLoadoutPC.Pickaxe != nullptr ? CosmeticLoadoutPC.Pickaxe : StaticLoadObject<UAthenaPickaxeItemDefinition>("/Game/Athena/Items/Weapons/WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
+
+		if (PickaxeDefinition)
+			FortInventory::GiveItem(NewPlayer, PickaxeDefinition->WeaponDefinition, 1);
+
+		AbilitySystemComponent::GiveAbilitySet(StaticLoadObject<UFortAbilitySet>("/Game/Abilities/Player/Generic/Traits/DefaultPlayer/GAS_AthenaPlayer.GAS_AthenaPlayer"), PlayerState);
+
+		FortInventory::Update(NewPlayer);
+
+		return HandleStartingNewPlayerOG(GameMode, NewPlayer);
 	}
 
 	static inline void (*OriginalOnAircraftExitedDropZone)(AFortGameModeAthena* GameMode, AFortAthenaAircraft* FortAthenaAircraft);
@@ -291,13 +310,11 @@ namespace FortGameModeAthena
 		return OnAircraftEnteredDropZoneOG(a1);
 	}
 
-	__int64 (*PickTeamOG)(AFortGameModeAthena* a1, unsigned __int8 a2, AFortPlayerControllerAthena* a3);
-	__int64 __fastcall PickTeam(AFortGameModeAthena* a1, unsigned __int8 a2, AFortPlayerControllerAthena* a3)
+	EFortTeam (*PickTeamOG)(AFortGameModeAthena* GameMode, uint8_t PreferredTeam, AFortPlayerControllerAthena* Controller);
+	EFortTeam PickTeam(AFortGameModeAthena* GameMode, uint8_t PreferredTeam, AFortPlayerControllerAthena* Controller)
 	{
-		if (a3->PlayerState->bIsABot) return PickTeamOG(a1, a2, a3);
-
 		int Ret = Globals::NextTeamIndex;
-		
+
 		++Globals::CurrentPlayersOnTeam;
 
 		if (Globals::CurrentPlayersOnTeam == Globals::MaxPlayersPerTeam)
@@ -307,16 +324,23 @@ namespace FortGameModeAthena
 		}
 
 		Log("PickTeam Called!");
-		return Ret;
+		return EFortTeam(Ret);
 	}
 
 	void HookAll()
 	{
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x11D8640), ReadyToStartMatch, reinterpret_cast<void**>(&ReadyToStartMatchOG));
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x11E1180), SpawnDefaultPawnFor, nullptr);
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x15BEDE0), HandleStartingNewPlayer, nullptr);
+		MH_CreateHook((LPVOID)(ImageBase + 0x11D8640), ReadyToStartMatch, (LPVOID*)&ReadyToStartMatchOG);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x11E1180), SpawnDefaultPawnFor, nullptr);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x15BEDE0), HandleStartingNewPlayer, (LPVOID*)&HandleStartingNewPlayerOG);
+
 		MH_CreateHook((LPVOID)(ImageBase + 0x11CF710), OnAircraftExitedDropZone, (LPVOID*)&OriginalOnAircraftExitedDropZone);
+
 		MH_CreateHook((LPVOID)(ImageBase + 0x11CF670), OnAircraftEnteredDropZone, (LPVOID*)&OnAircraftEnteredDropZoneOG);
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x11D42B0), PickTeam, reinterpret_cast<void**>(&PickTeamOG));
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x11D42B0), PickTeam, (LPVOID*)&PickTeamOG);
+
+		Log("Hooked GameMode!");
 	}
 }

@@ -37,6 +37,8 @@ static UFortBuildingItemDefinition* Stair = UObject::FindObject<UFortBuildingIte
 static UFortBuildingItemDefinition* Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
 static UFortEditToolItemDefinition* EditTool = UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool");
 
+static int32 (*ServerReplicateActors)(UReplicationDriver*, float DeltaSeconds) = decltype(ServerReplicateActors)(ImageBase + 0xA33E90); //UReplicationGraph
+
 static UNetDriver* (*CreateNetDriver)(UEngine* This, UWorld* InWorld, FName NetDriverDefinition) = decltype(CreateNetDriver)(ImageBase + 0x347FAF0);
 static bool (*InitListen)(UNetDriver* This, UWorld* InWorld, FURL& ListenURL, bool bReuseAddressAndPort, FString& Error) = decltype(InitListen)(ImageBase + 0x6F5F90);
 static void (*SetWorld)(UNetDriver* This, UWorld* InWorld) = decltype(SetWorld)(ImageBase + 0x31EDF40);
@@ -500,4 +502,35 @@ int IsFalse()
 void nullFunc() 
 {
 
+}
+
+FRotator Rotator(FQuat This) {
+	const double SingularityTest = This.Z * This.X - This.W * This.Y;
+	const double YawY = 2. * (This.W * This.Z + This.X * This.Y);
+	const double YawX = (1. - 2. * ((This.Y * This.Y) + (This.Z * This.Z)));
+
+	const double SINGULARITY_THRESHOLD = 0.4999995;
+	const double RAD_TO_DEG = 57.29577951308232;
+	FRotator RotatorFromQuat{};
+
+	if (SingularityTest < -SINGULARITY_THRESHOLD)
+	{
+		RotatorFromQuat.Pitch = -90.;
+		RotatorFromQuat.Yaw = atan2(YawY, YawX) * RAD_TO_DEG;
+		RotatorFromQuat.Roll = FRotator::NormalizeAxis(-RotatorFromQuat.Yaw - (2. * atan2(This.X, This.W) * RAD_TO_DEG));
+	}
+	else if (SingularityTest > SINGULARITY_THRESHOLD)
+	{
+		RotatorFromQuat.Pitch = 90.;
+		RotatorFromQuat.Yaw = atan2(YawY, YawX) * RAD_TO_DEG;
+		RotatorFromQuat.Roll = FRotator::NormalizeAxis(RotatorFromQuat.Yaw - (2. * atan2(This.X, This.W) * RAD_TO_DEG));
+	}
+	else
+	{
+		RotatorFromQuat.Pitch = asin(2. * SingularityTest) * RAD_TO_DEG;
+		RotatorFromQuat.Yaw = atan2(YawY, YawX) * RAD_TO_DEG;
+		RotatorFromQuat.Roll = atan2(-2. * (This.W * This.X + This.Y * This.Z), (1. - 2. * ((This.X * This.X) + (This.Y * This.Y)))) * RAD_TO_DEG;
+	}
+
+	return RotatorFromQuat;
 }

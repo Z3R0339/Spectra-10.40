@@ -1,18 +1,21 @@
 #pragma once
 #include "framework.h"
 #include "FortInventory.h"
-#include "FortAbilitySystemComponent.h"
+#include "AbilitySystemComponent.h"
 #include "Looting.h"
+#include "Vehicles.h"
 #include "FortAIBotControllerAthena.h"
-#include "FortGameModeAthena.h"
+#include "GameMode.h"
 
-namespace FortPlayerControllerAthena
+namespace Controller
 {
+	void (*ServerAcknowledgePossessionOG)(APlayerController* PC, APawn* P);
 	void ServerAcknowledgePossession(APlayerController* PC, APawn* P)
 	{
 		PC->AcknowledgedPawn = P;
 	}
 
+	void (*ServerReadyToStartMatchOG)(AFortPlayerControllerAthena* PC);
 	void ServerReadyToStartMatch(AFortPlayerControllerAthena* PC)
 	{
 		auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
@@ -20,40 +23,18 @@ namespace FortPlayerControllerAthena
 
 		static bool bSetupWorld = false;
 
-		PC->MyFortPawn->CosmeticLoadout = PC->CosmeticLoadoutPC;
-		PC->MyFortPawn->OnRep_CosmeticLoadout();
-
-		ApplyCharacterCustomization(PC->PlayerState, PC->MyFortPawn);
-
 		if (!bSetupWorld)
 		{
 			bSetupWorld = true;
-			Log(std::format("AFortPlayerController::ServerReadyToStartMatch bSetupWorld = {}", bSetupWorld).c_str());
+
 			Looting::SpawnFloorLoot();
-			Looting::SpawnVehicles();
-		}
+			Vehicles::SpawnVehicles();
 
-		if (AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState)
-		{
-			PlayerState->TeamIndex = Globals::NextTeamIndex;
-			PlayerState->OnRep_TeamIndex(0); //i think??
-
-			PlayerState->SquadId = PlayerState->TeamIndex - 3;
-			PlayerState->OnRep_SquadId();
-
-			PlayerState->OnRep_PlayerTeam();
-			PlayerState->OnRep_PlayerTeamPrivate();
-
-			FGameMemberInfo NewMemberInfo{ -1,-1,-1 };
-			NewMemberInfo.MemberUniqueId = PlayerState->GetUniqueID();
-			NewMemberInfo.SquadId = PlayerState->SquadId;
-			NewMemberInfo.TeamIndex = PlayerState->TeamIndex;
-
-			GameState->GameMemberInfoArray.Members.Add(NewMemberInfo);
-			GameState->GameMemberInfoArray.MarkItemDirty(NewMemberInfo);
+			Log(std::format("AFortPlayerController::ServerReadyToStartMatch bSetupWorld = {}", bSetupWorld).c_str());
 		}
 	}
 
+	void (*ServerLoadingScreenDroppedOG)(AFortPlayerControllerAthena* PC);
 	void ServerLoadingScreenDropped(AFortPlayerControllerAthena* PC)
 	{
 		AFortGameModeAthena* GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
@@ -61,22 +42,7 @@ namespace FortPlayerControllerAthena
 
 		AFortPlayerState* PS = (AFortPlayerState*)PC->PlayerState;
 
-		for (int i = 0; i < GameMode->StartingItems.Num(); i++)
-			FortInventory::GiveItem(PC, GameMode->StartingItems[i].Item, GameMode->StartingItems[i].Count);
-
-		UAthenaPickaxeItemDefinition* PickaxeDefinition = nullptr;
-		FFortAthenaLoadout& CosmeticLoadoutPC = PC->CosmeticLoadoutPC;
-
-		PickaxeDefinition = CosmeticLoadoutPC.Pickaxe != nullptr ? CosmeticLoadoutPC.Pickaxe : StaticLoadObject<UAthenaPickaxeItemDefinition>("/Game/Athena/Items/Weapons/WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
-
-		if (PickaxeDefinition)
-			FortInventory::GiveItem(PC, PickaxeDefinition->WeaponDefinition, 1);
-
-		//UFortAbilitySystemComponentAthena
-
-		FortAbilitySystemComponent::GiveAbilitySet(StaticLoadObject<UFortAbilitySet>("/Game/Abilities/Player/Generic/Traits/DefaultPlayer/GAS_AthenaPlayer.GAS_AthenaPlayer"), PS);
-
-		FortInventory::Update(PC);
+		return ServerLoadingScreenDroppedOG(PC);
 	}
 
 	void ServerExecuteInventoryItem(AFortPlayerController* PC, const FGuid& ItemGuid)
@@ -415,12 +381,15 @@ namespace FortPlayerControllerAthena
 
 	void HookAll()
 	{
-		HookVTable<AFortPlayerControllerAthena>(0x108, ServerAcknowledgePossession);
+		HookVTable<AFortPlayerControllerAthena>(0x108, ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
+		
+		MH_CreateHook((LPVOID)(ImageBase + 0x19C7940), ServerReadyToStartMatch, (LPVOID*)&ServerReadyToStartMatchOG);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x1F19990), ServerLoadingScreenDropped, (LPVOID*)&ServerLoadingScreenDroppedOG);
+
 		HookVTable<AFortPlayerControllerAthena>(0x1FE, ServerExecuteInventoryItem);
 
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x19C7940), ServerReadyToStartMatch, nullptr);
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1F19990), ServerLoadingScreenDropped, nullptr);
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1CC36A0), OnDamageServer, nullptr);
+		MH_CreateHook((LPVOID)(ImageBase + 0x1CC36A0), OnDamageServer, nullptr);
 
 		HookVTable<AFortPlayerControllerAthena>(0x1BC, ServerCheat);
 		HookVTable<AFortPlayerControllerAthena>(0x210, ServerAttemptInventoryDrop);
@@ -428,10 +397,11 @@ namespace FortPlayerControllerAthena
 		HookVTable<AFortPlayerControllerAthena>(0x22A, ServerBeginEditingBuildingActor);
 		HookVTable<AFortPlayerControllerAthena>(0x228, ServerEndEditingBuildingActor);
 
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1F34E50), ClientOnPawnDied, reinterpret_cast<void**>(&ClientOnPawnDiedOG));
-		//MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1DC98D0), ServerAttemptInteract, reinterpret_cast<void**>(&ServerAttemptInteractOG)); Wrong Offset
+		MH_CreateHook((LPVOID)(ImageBase + 0x1F34E50), ClientOnPawnDied, (LPVOID*)&ClientOnPawnDiedOG);
 
 		HookVTable<AFortPlayerStateAthena>(0x103, ServerSetInAircraft);
-		HookVTable<UFortControllerComponent_Interaction>(0x80, ServerAttemptInteract, reinterpret_cast<void**>(&ServerAttemptInteractOG));
+		HookVTable<UFortControllerComponent_Interaction>(0x80, ServerAttemptInteract, (LPVOID*)&ServerAttemptInteractOG);
+
+		Log("Controller Hooked!");
 	}
 }
