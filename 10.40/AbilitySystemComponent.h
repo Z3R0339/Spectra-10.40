@@ -51,6 +51,10 @@ namespace AbilitySystemComponent
 	{
 		for (int i = 0; i < Ability->GameplayAbilities.Num(); i++)
 			GiveAbility((UFortGameplayAbility*)Ability->GameplayAbilities[i].Get()->DefaultObject, PS);
+		for (int i = 0; i < Ability->GrantedGameplayEffects.Num(); i++) {
+			FGameplayEffectApplicationInfoHard GameplayEffect = Ability->GrantedGameplayEffects[i];
+			PS->AbilitySystemComponent->BP_ApplyGameplayEffectToSelf(GameplayEffect.GameplayEffect.Get(), GameplayEffect.Level, PS->AbilitySystemComponent->MakeEffectContext());
+		}
 	}
 
 	void HookAll()
