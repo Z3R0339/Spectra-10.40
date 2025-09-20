@@ -136,6 +136,15 @@ namespace Pawn
 		return ServerSendZiplineStateOG(PlayerPawn, InZiplineState);
 	}
 
+	void MovingEmoteStopped(AFortPawn* Pawn)
+	{
+		Log("MovingEmoteStopped Called!");
+		if (!Pawn)
+			return;
+
+		Pawn->bMovingEmote = false;
+	}
+
 	void HookAll()
 	{
 		HookVTable<APlayerPawn_Athena_C>(0x1C7, ServerHandlePickup);
@@ -145,6 +154,8 @@ namespace Pawn
 		//MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EFAC60), ServerMove, nullptr);
 
 		HookVTable<APlayerPawn_Athena_C>(0x1D2, ServerSendZiplineState, reinterpret_cast<void**>(&ServerSendZiplineStateOG));
+
+		//MH_CreateHook((LPVOID)(ImageBase + 0xB3EBA0), MovingEmoteStopped, nullptr);
 
 		Log("Pawn Hooked!");
 	}

@@ -343,6 +343,53 @@ namespace Controller
 		return ServerAttemptInteractOG(ComponentInteraction, ReceivingActor, InteractComponent, InteractType, OptionalObjectData);
 	}
 
+	void ServerPlayEmoteItem(AFortPlayerControllerAthena* PC, UFortMontageItemDefinitionBase* EmoteAsset, float EmoteRandomNumber) {
+		Log("ServerPlayEmoteItem Called!");
+
+		if (!PC || !EmoteAsset)
+			return;
+
+		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+		if (GameState->GamePhase == EAthenaGamePhase::Aircraft) {
+			return;
+		}
+
+		UClass* DanceAbility = StaticLoadObject<UClass>("/Game/Abilities/Emotes/GAB_Emote_Generic.GAB_Emote_Generic_C");
+		UClass* SprayAbility = StaticLoadObject<UClass>("/Game/Abilities/Sprays/GAB_Spray_Generic.GAB_Spray_Generic_C");
+
+		if (!DanceAbility || !SprayAbility)
+			return;
+
+		auto EmoteDef = (UAthenaDanceItemDefinition*)EmoteAsset;
+		if (!EmoteDef)
+			return;
+
+		PC->MyFortPawn->bMovingEmote = EmoteDef->bMovingEmote;
+		PC->MyFortPawn->EmoteWalkSpeed = EmoteDef->WalkForwardSpeed;
+		PC->MyFortPawn->bMovingEmoteForwardOnly = EmoteDef->bMoveForwardOnly;
+		PC->MyFortPawn->EmoteWalkSpeed = EmoteDef->WalkForwardSpeed;
+
+		FGameplayAbilitySpec Spec{};
+		UGameplayAbility* Ability = nullptr;
+
+		if (EmoteAsset->IsA(UAthenaSprayItemDefinition::StaticClass()))
+		{
+			Ability = (UGameplayAbility*)SprayAbility->DefaultObject;
+		}
+
+		if (Ability == nullptr) {
+			Ability = (UGameplayAbility*)DanceAbility->DefaultObject;
+		}
+
+		AbilitySpecConstructor(&Spec, Ability, 1, -1, EmoteDef);
+		GiveAbilityAndActivateOnce(((AFortPlayerStateAthena*)PC->PlayerState)->AbilitySystemComponent, &Spec.Handle, Spec);
+	}
+
+	void ServerReturnToMainMenu(AFortPlayerControllerAthena* PC)
+	{
+		PC->ClientReturnToMainMenu(L"");
+	}
+
 	void HookAll()
 	{
 		HookVTable<AFortPlayerControllerAthena>(0x108, ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
@@ -365,6 +412,9 @@ namespace Controller
 
 		HookVTable<AFortPlayerStateAthena>(0x103, ServerSetInAircraft);
 		HookVTable<UFortControllerComponent_Interaction>(0x81, ServerAttemptInteract, (LPVOID*)&ServerAttemptInteractOG);
+
+		HookVTable<AFortPlayerControllerAthena>(0x1BE, ServerPlayEmoteItem);
+		HookVTable<AFortPlayerControllerAthena>(0x258, ServerReturnToMainMenu);
 
 		Log("Controller Hooked!");
 	}
