@@ -136,11 +136,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Bots.h" />
     <ClInclude Include="BuildingActor.h" />
+    <ClInclude Include="BuildingContainer.h" />
+    <ClInclude Include="FortPickup.h" />
     <ClInclude Include="FortWeapon.h" />
     <ClInclude Include="BotNames.h" />
     <ClInclude Include="AbilitySystemComponent.h" />
-    <ClInclude Include="FortAIBotControllerAthena.h" />
+    <ClInclude Include="AIController.h" />
     <ClInclude Include="GameMode.h" />
     <ClInclude Include="FortInventory.h" />
     <ClInclude Include="Controller.h" />
@@ -165,6 +168,7 @@
     <ClInclude Include="SDK\SDK\FortniteGame_structs.hpp" />
     <ClInclude Include="SDK\UnrealContainers.hpp" />
     <ClInclude Include="SDK\UtfN.hpp" />
+    <ClInclude Include="ServerBotManager.h" />
     <ClInclude Include="Vehicles.h" />
   </ItemGroup>
   <ItemGroup>

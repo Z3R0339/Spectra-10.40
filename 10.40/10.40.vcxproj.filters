@@ -19,6 +19,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{ab7c2553-f775-4f1e-9cad-344ebba39ed9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Phoebe">
+      <UniqueIdentifier>{8ff22552-1529-4c8b-96f5-9c1f99820cea}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -72,22 +78,16 @@
     <ClInclude Include="AbilitySystemComponent.h">
       <Filter>Hooks</Filter>
     </ClInclude>
-    <ClInclude Include="Looting.h">
-      <Filter>Hooks</Filter>
-    </ClInclude>
     <ClInclude Include="Pawn.h">
       <Filter>Hooks</Filter>
     </ClInclude>
     <ClInclude Include="SDK\SDK\CoreUObject_classes.hpp">
       <Filter>SDK\SDK</Filter>
     </ClInclude>
-    <ClInclude Include="FortAIBotControllerAthena.h">
+    <ClInclude Include="AIController.h">
       <Filter>Hooks</Filter>
     </ClInclude>
     <ClInclude Include="PlayerBots.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BotNames.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vehicles.h">
@@ -109,6 +109,24 @@
       <Filter>Hooks</Filter>
     </ClInclude>
     <ClInclude Include="BuildingActor.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerBotManager.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="Bots.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BotNames.h">
+      <Filter>Resources\Phoebe</Filter>
+    </ClInclude>
+    <ClInclude Include="Looting.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BuildingContainer.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="FortPickup.h">
       <Filter>Hooks</Filter>
     </ClInclude>
   </ItemGroup>

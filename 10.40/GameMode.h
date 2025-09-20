@@ -1,6 +1,6 @@
 #pragma once
 #include "framework.h"
-#include "FortAIBotControllerAthena.h"
+#include "ServerBotManager.h"
 
 #include "FortInventory.h"
 #include "AbilitySystemComponent.h"
@@ -105,16 +105,16 @@ namespace GameMode
 
 						if (SkinsData.contains("Athena_Commando") || SkinsData.contains("CID_Character") || !SkinsData.contains("CID_NPC") || !SkinsData.contains("CID_VIP") || !SkinsData.contains("CID_TBD"))
 						{
-							FortAIBotControllerAthena::Characters.push_back((UAthenaCharacterItemDefinition*)Obj);
+							Characters.push_back((UAthenaCharacterItemDefinition*)Obj);
 						}
 					}
 					if (Obj && Obj->IsA(UAthenaBackpackItemDefinition::StaticClass())) // pretty sure this doesnt have dev stuff
 					{
-						FortAIBotControllerAthena::Backpacks.push_back((UAthenaBackpackItemDefinition*)Obj);
+						Backpacks.push_back((UAthenaBackpackItemDefinition*)Obj);
 					}
 					if (Obj && Obj->IsA(UAthenaPickaxeItemDefinition::StaticClass())) // pretty sure this doesnt have dev stuff
 					{
-						FortAIBotControllerAthena::Pickaxes.push_back((UAthenaPickaxeItemDefinition*)Obj);
+						Pickaxes.push_back((UAthenaPickaxeItemDefinition*)Obj);
 					}
 					if (Obj && Obj->IsA(UAthenaDanceItemDefinition::StaticClass()))
 					{
@@ -123,13 +123,13 @@ namespace GameMode
 						if (EmoteData.contains("EID") || !EmoteData.contains("Sync") || !EmoteData.contains("Owned"))
 						{
 
-							FortAIBotControllerAthena::Dances.push_back((UAthenaDanceItemDefinition*)Obj);
+							Dances.push_back((UAthenaDanceItemDefinition*)Obj);
 						}
 
 					}
 					if (Obj && Obj->IsA(UAthenaGliderItemDefinition::StaticClass()))
 					{
-						FortAIBotControllerAthena::Gliders.push_back((UAthenaGliderItemDefinition*)Obj);
+						Gliders.push_back((UAthenaGliderItemDefinition*)Obj);
 					}
 				}
 

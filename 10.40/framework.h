@@ -37,6 +37,13 @@ static UFortBuildingItemDefinition* Stair = UObject::FindObject<UFortBuildingIte
 static UFortBuildingItemDefinition* Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
 static UFortEditToolItemDefinition* EditTool = UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool");
 
+static std::vector<UAthenaCharacterItemDefinition*> Characters{};
+static std::vector<UAthenaPickaxeItemDefinition*> Pickaxes{};
+static std::vector<UAthenaBackpackItemDefinition*> Backpacks{};
+static std::vector<UAthenaGliderItemDefinition*> Gliders{};
+static std::vector<UAthenaSkyDiveContrailItemDefinition*> Contrails{};
+inline std::vector<UAthenaDanceItemDefinition*> Dances{};
+
 static int32 (*ServerReplicateActors)(UReplicationDriver*, float DeltaSeconds) = decltype(ServerReplicateActors)(ImageBase + 0xA33E90); //UReplicationGraph
 
 static UNetDriver* (*CreateNetDriver)(UEngine* This, UWorld* InWorld, FName NetDriverDefinition) = decltype(CreateNetDriver)(ImageBase + 0x347FAF0);

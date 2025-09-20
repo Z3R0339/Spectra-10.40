@@ -2,7 +2,7 @@
 #include "framework.h"
 
 #include "FortInventory.h"
-#include "Looting.h"
+#include "BuildingContainer.h"
 
 namespace PlayerBots {
     enum class EBotBuildingType {
@@ -1913,7 +1913,7 @@ namespace PlayerBots {
                         else if (UGameplayStatics::GetDefaultObj()->GetTimeSeconds(UWorld::GetWorld()) - bot->TimeToNextAction >= 1.5f && bot->ClosestLootableType == ELootableType::Chest) {
                             ABuildingContainer* Chest = (ABuildingContainer*)TargetLootable;
                             
-                            Looting::SpawnLoot(Chest);
+                            BuildingContainer::SpawnLoot(Chest);
                             Chest->bAlreadySearched = true;
                             /*AFortPickup* Pickup = bot->GetNearestPickup();
                             if (Pickup)

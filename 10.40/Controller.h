@@ -4,7 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "Looting.h"
 #include "Vehicles.h"
-#include "FortAIBotControllerAthena.h"
+#include "ServerBotManager.h"
 #include "GameMode.h"
 
 namespace Controller
@@ -74,7 +74,7 @@ namespace Controller
 
 		if (Command == "SpawnBot") 
 		{
-			FortAIBotControllerAthena::SpawnPlayerBot(PC->Pawn, PlayerBots::EBotState::Landed);
+			Bots::SpawnPlayerBot(PC->Pawn, PlayerBots::EBotState::Landed);
 		}
 
 		if (Command == "StartAircraftEarly")

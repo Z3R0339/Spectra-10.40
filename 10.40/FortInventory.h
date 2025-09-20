@@ -22,16 +22,36 @@ namespace FortInventory
 		return NewItem;
 	}
 
-	static UFortWorldItem* GiveItem(AFortPlayerController* PC, UFortItemDefinition* ItemDefinition, int Count, int LoadedAmmo = 0)
+	void GiveItem(AFortPlayerController* PC, UFortItemDefinition* Def, int Count = 1, int LoadedAmmo = 1, bool bShouldAddToExistingStack = false)
 	{
-		UFortWorldItem* NewInstance = CreateNewItem(PC, ItemDefinition, Count);
-		NewInstance->ItemEntry.Count = Count;
-		NewInstance->ItemEntry.LoadedAmmo = LoadedAmmo;
-		PC->WorldInventory->Inventory.ReplicatedEntries.Add(NewInstance->ItemEntry);
+		if (bShouldAddToExistingStack) {
+			for (FFortItemEntry& ItemEntry : PC->WorldInventory->Inventory.ReplicatedEntries) {
+				if (Def == ItemEntry.ItemDefinition) {
+					ItemEntry.Count += Count;
 
-		Update(PC, &NewInstance->ItemEntry);
+					PC->WorldInventory->Inventory.MarkItemDirty(ItemEntry);
+					Update(PC);
+					break;
+				}
+			}
+			return;
+		}
 
-		return NewInstance;
+		UFortWorldItem* Item = Cast<UFortWorldItem>(Def->CreateTemporaryItemInstanceBP(Count, 0));
+		Item->SetOwningControllerForTemporaryItem(PC);
+		Item->ItemEntry.LoadedAmmo = LoadedAmmo;
+
+		if (Item && Item->ItemEntry.ItemDefinition) {
+			FFortItemEntryStateValue Value{};
+			Value.IntValue = true;
+			Value.StateType = EFortItemEntryState::ShouldShowItemToast;
+			Item->ItemEntry.StateValues.Add(Value);
+		}
+
+		PC->WorldInventory->Inventory.ReplicatedEntries.Add(Item->ItemEntry);
+		PC->WorldInventory->Inventory.ItemInstances.Add(Item);
+		PC->WorldInventory->Inventory.MarkItemDirty(Item->ItemEntry);
+		PC->WorldInventory->HandleInventoryLocalUpdate();
 	}
 
 	static UFortItemDefinition* FindItemDefinition(AFortPlayerController* PC, const FGuid& Guid)
@@ -58,6 +78,20 @@ namespace FortInventory
 			FFortItemEntry* ItemEntry = &PC->WorldInventory->Inventory.ReplicatedEntries[i];
 			if (!ItemEntry) continue;
 			if (ItemEntry->ItemDefinition == ItemDefinition) return ItemEntry;
+		}
+
+		return nullptr;
+	}
+
+	static FFortItemEntry* FindItemEntry(AFortPlayerController* PC, const FGuid& Guid)
+	{
+		if (!PC) return nullptr;
+
+		for (int i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
+		{
+			FFortItemEntry* ItemEntry = &PC->WorldInventory->Inventory.ReplicatedEntries[i];
+			if (!ItemEntry) continue;
+			if (ItemEntry->ItemGuid == Guid) return ItemEntry;
 		}
 
 		return nullptr;
@@ -119,26 +153,12 @@ namespace FortInventory
 			if (GetQuickBars(Entries->ItemDefinition) == EFortQuickBars::Primary)
 			{
 				++Count;
-				Log(std::format("Count={}", Count).c_str());
+				//Log(std::format("Count={}", Count).c_str());
 				if (Count >= Max)
 					return true;
 			}
 		}
 
 		return false;
-	}
-
-	static FFortItemEntry* FindItemEntry(AFortPlayerController* PC, const FGuid& Guid)
-	{
-		if (!PC) return nullptr;
-
-		for (int i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
-		{
-			FFortItemEntry* ItemEntry = &PC->WorldInventory->Inventory.ReplicatedEntries[i];
-			if (!ItemEntry) continue;
-			if (ItemEntry->ItemGuid == Guid) return ItemEntry;
-		}
-
-		return nullptr;
 	}
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include "framework.h"
 
-#include "FortAIBotControllerAthena.h"
+#include "Bots.h"
 
 namespace NetDriver {
 	void (*TickFlushOG)(UNetDriver*, float DeltaSeconds);
@@ -20,7 +20,7 @@ namespace NetDriver {
 		{
 			if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.05f))
 			{
-				FortAIBotControllerAthena::SpawnPlayerBot();
+				Bots::SpawnPlayerBot();
 			}
 		}
 

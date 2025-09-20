@@ -7,17 +7,19 @@
 
 #include "Controller.h"
 #include "AbilitySystemComponent.h"
-#include "Looting.h"
 #include "Pawn.h"
 
 #include "FortWeapon.h"
+#include "FortPickup.h"
 
 #include "BuildingActor.h"
+#include "BuildingContainer.h"
 
 #include "Net.h"
 #include "NetDriver.h"
 
-#include "FortAIBotControllerAthena.h"
+#include "AIController.h"
+#include "ServerBotManager.h"
 
 void InitConsole() {
     AllocConsole();
@@ -47,17 +49,19 @@ void Hook() {
     
     Controller::HookAll();
     AbilitySystemComponent::HookAll();
-    Looting::HookAll();
     Pawn::HookAll();
 
     FortWeapon::HookAll();
+    FortPickup::HookAll();
 
     BuildingActor::HookAll();
+    BuildingContainer::HookAll();
 
     Net::HookAll();
     NetDriver::HookAll();
 
-    FortAIBotControllerAthena::HookAll();
+    AIController::HookAll();
+    ServerBotManager::HookAll();
 
     MH_EnableHook(MH_ALL_HOOKS);
 }
