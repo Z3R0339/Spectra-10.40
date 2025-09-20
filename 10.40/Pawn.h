@@ -142,7 +142,7 @@ namespace Pawn
 
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EF0A80), NetMulticast_Athena_BatchedDamageCues, reinterpret_cast<void**>(&NetMulticast_Athena_BatchedDamageCuesOG));
 		MH_CreateHook((LPVOID)(ImageBase + 0x196DB00), OnCapsuleBeginOverlap, (LPVOID*)&OnCapsuleBeginOverlapOG);
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EFAC60), ServerMove, nullptr);
+		//MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EFAC60), ServerMove, nullptr);
 
 		HookVTable<APlayerPawn_Athena_C>(0x1D2, ServerSendZiplineState, reinterpret_cast<void**>(&ServerSendZiplineStateOG));
 
