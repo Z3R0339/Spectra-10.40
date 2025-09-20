@@ -281,22 +281,47 @@ namespace Pawn
 		return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
 	}
 
-	void (*OnCapsuleBeginOverlapOG)(AFortPlayerPawn* PlayerPawn, UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	void OnCapsuleBeginOverlap(AFortPlayerPawn* PlayerPawn, UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+	void (*OnCapsuleBeginOverlapOG)(AFortPlayerPawn* Pawn, UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnCapsuleBeginOverlap(AFortPlayerPawn* Pawn, UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 	{
-		//Log("OnCapsuleBeginOverlap");
-		if (!PlayerPawn || !OtherActor) return;
+		//Log("OnCapsuleBeginOverlap Called!");
+		if (!Pawn || !OtherActor) return;
 
 		if (OtherActor->IsA(AFortPickup::StaticClass()))
 		{
+			auto PC = (AFortPlayerControllerAthena*)Pawn->Controller;
+			if (!PC) return;
+			if (PC->PlayerState->bIsABot) return;
+
 			AFortPickup* Pickup = (AFortPickup*)OtherActor;
-			FFortPickupLocationData& PickupLocationData = Pickup->PickupLocationData;
-			if (Pickup->PawnWhoDroppedPickup == PlayerPawn) return;
-			if (Pickup->PrimaryPickupItemEntry.ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass()) || 
-				Pickup->PrimaryPickupItemEntry.ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) ||
-				Pickup->PrimaryPickupItemEntry.ItemDefinition->IsA(UFortTrapItemDefinition::StaticClass()))
-				ServerHandlePickup(PlayerPawn, Pickup, PickupLocationData.FlyTime, PickupLocationData.StartDirection, PickupLocationData.bPlayPickupSound);
+
+			if (Pickup->PawnWhoDroppedPickup == Pawn)
+				return;
+
+			UFortWorldItemDefinition* Def = (UFortWorldItemDefinition*)Pickup->PrimaryPickupItemEntry.ItemDefinition;
+
+			if (!Def) {
+				return;
+			}
+
+			FFortItemEntry* ItemEntry = FortInventory::FindItemEntry(PC, Def);
+			auto Count = ItemEntry ? ItemEntry->Count : 0;
+
+			if (Def->IsStackable()) {
+				if (Def->IsA(UFortAmmoItemDefinition::StaticClass()) || Def->IsA(UFortResourceItemDefinition::StaticClass()) || Def->IsA(UFortTrapItemDefinition::StaticClass())) {
+					if (Count < Def->MaxStackSize) {
+						Pawn->ServerHandlePickup(Pickup, 0.40f, FVector(), true);
+					}
+				}
+				else if (ItemEntry) {
+					if (Count < Def->MaxStackSize) {
+						Pawn->ServerHandlePickup(Pickup, 0.40f, FVector(), true);
+					}
+				}
+			}
 		}
+
+		return;
 	}
 
 	void ServerMove(AFortPhysicsPawn* PhysicsPawn, const FReplicatedPhysicsPawnState& InState)
@@ -354,7 +379,7 @@ namespace Pawn
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1C66A30), OnReload, reinterpret_cast<void**>(&OnReloadOG));
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x16F7D10), CompletePickupAnimation, reinterpret_cast<void**>(&CompletePickupAnimationOG));
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EF0A80), NetMulticast_Athena_BatchedDamageCues, reinterpret_cast<void**>(&NetMulticast_Athena_BatchedDamageCuesOG));
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1F3F740), OnCapsuleBeginOverlap, reinterpret_cast<void**>(&OnCapsuleBeginOverlapOG));
+		MH_CreateHook((LPVOID)(ImageBase + 0x196DB00), OnCapsuleBeginOverlap, (LPVOID*)&OnCapsuleBeginOverlapOG);
 		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EFAC60), ServerMove, nullptr);
 
 		HookVTable<APlayerPawn_Athena_C>(0x1D2, ServerSendZiplineState, reinterpret_cast<void**>(&ServerSendZiplineStateOG));

@@ -142,6 +142,8 @@
     <ClInclude Include="GameMode.h" />
     <ClInclude Include="FortInventory.h" />
     <ClInclude Include="Controller.h" />
+    <ClInclude Include="Misc.h" />
+    <ClInclude Include="NetDriver.h" />
     <ClInclude Include="Pawn.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Globals.h" />

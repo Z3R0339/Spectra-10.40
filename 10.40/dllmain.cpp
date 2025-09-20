@@ -1,12 +1,18 @@
 #include "framework.h"
+
 #include "PE.h"
+#include "Misc.h"
 
 #include "GameMode.h"
 #include "Controller.h"
-#include "Net.h"
+
 #include "AbilitySystemComponent.h"
 #include "Looting.h"
 #include "Pawn.h"
+
+#include "Net.h"
+#include "NetDriver.h"
+
 #include "FortAIBotControllerAthena.h"
 
 void InitConsole() {
@@ -30,14 +36,21 @@ void LoadWorld() {
 }
 
 void Hook() {
+    PE::HookAll();
+    Misc::HookAll();
+
     GameMode::HookAll();
-    Net::HookAll();
+    
     Controller::HookAll();
     AbilitySystemComponent::HookAll();
     Looting::HookAll();
     Pawn::HookAll();
-    PE::HookAll();
+
+    Net::HookAll();
+    NetDriver::HookAll();
+
     FortAIBotControllerAthena::HookAll();
+
     MH_EnableHook(MH_ALL_HOOKS);
 }
 

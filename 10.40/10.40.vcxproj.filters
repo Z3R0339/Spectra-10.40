@@ -99,6 +99,12 @@
     <ClInclude Include="FortInventory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="NetDriver.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="Misc.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
