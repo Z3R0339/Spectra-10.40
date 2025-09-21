@@ -183,7 +183,7 @@ namespace Controller
 		EditTool->EditActor = BuildingActorToEdit;
 		EditTool->OnRep_EditActor();
 	}
-
+	 
 	void ServerEndEditingBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToStopEditing) {
 		if (!BuildingActorToStopEditing || !PC->MyFortPawn || BuildingActorToStopEditing->bDestroyed || BuildingActorToStopEditing->EditingPlayer != PC->PlayerState)
 			return;

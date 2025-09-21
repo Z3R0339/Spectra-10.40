@@ -18,7 +18,7 @@ namespace NetDriver {
 			&& (GameMode->AlivePlayers.Num() + GameMode->AliveBots.Num()) < GameMode->GameSession->MaxPlayers
 			&& GameMode->AliveBots.Num() < Globals::MaxBotsToSpawn && Globals::bBotsEnabled)
 		{
-			if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.05f))
+			if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.06f))
 			{
 				Bots::SpawnPlayerBot();
 			}
@@ -33,7 +33,7 @@ namespace NetDriver {
 
 	float GetMaxTickRate()
 	{
-		return 30.0f;
+		return 60.0f;
 	}
 
 	void HookAll() {
