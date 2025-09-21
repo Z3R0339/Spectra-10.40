@@ -129,6 +129,9 @@
     <ClInclude Include="FortPickup.h">
       <Filter>Hooks</Filter>
     </ClInclude>
+    <ClInclude Include="QuestManager.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

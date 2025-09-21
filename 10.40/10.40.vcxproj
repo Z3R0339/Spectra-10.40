@@ -156,6 +156,7 @@
     <ClInclude Include="Looting.h" />
     <ClInclude Include="Net.h" />
     <ClInclude Include="PlayerBots.h" />
+    <ClInclude Include="QuestManager.h" />
     <ClInclude Include="SDK\PropertyFixup.hpp" />
     <ClInclude Include="SDK\SDK.hpp" />
     <ClInclude Include="SDK\SDK\AIModule_classes.hpp" />

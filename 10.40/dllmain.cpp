@@ -21,6 +21,8 @@
 #include "AIController.h"
 #include "ServerBotManager.h"
 
+#include "QuestManager.h"
+
 void InitConsole() {
     AllocConsole();
     FILE* fptr;
@@ -62,6 +64,8 @@ void Hook() {
 
     AIController::HookAll();
     ServerBotManager::HookAll();
+
+    QuestManager::HookAll();
 
     MH_EnableHook(MH_ALL_HOOKS);
 }

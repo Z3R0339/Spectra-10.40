@@ -87,6 +87,33 @@ struct FGameplayTagContainer final
 public:
 	TArray<struct FGameplayTag>                   GameplayTags;                                      // 0x0000(0x0010)(BlueprintVisible, ZeroConstructor, SaveGame, Protected, NativeAccessSpecifierProtected)
 	TArray<struct FGameplayTag>                   ParentTags;                                        // 0x0010(0x0010)(ZeroConstructor, Transient, Protected, NativeAccessSpecifierProtected)
+
+public:
+	void AppendTags(struct FGameplayTagContainer const& Other)
+	{
+		GameplayTags.ResizeTo(GameplayTags.Num() + Other.GameplayTags.Num());
+		ParentTags.ResizeTo(ParentTags.Num() + Other.ParentTags.Num());
+
+		for (const struct FGameplayTag& OtherTag : Other.GameplayTags)
+		{
+			GameplayTags.Add(OtherTag);
+		}
+
+		for (const struct FGameplayTag& OtherTag : Other.ParentTags)
+		{
+			ParentTags.Add(OtherTag);
+		}
+	}
+
+	void AppendTags(struct FGameplayTagContainer const& Other) const
+	{
+		return const_cast<struct FGameplayTagContainer&>(*this).AppendTags(Other); // skunked
+	}
+
+	inline bool IsEmpty() const
+	{
+		return GameplayTags.Num() == 0;
+	}
 };
 
 // ScriptStruct GameplayTags.GameplayTagSource
