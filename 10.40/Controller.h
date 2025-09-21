@@ -367,7 +367,6 @@ namespace Controller
 		PC->MyFortPawn->bMovingEmote = EmoteDef->bMovingEmote;
 		PC->MyFortPawn->EmoteWalkSpeed = EmoteDef->WalkForwardSpeed;
 		PC->MyFortPawn->bMovingEmoteForwardOnly = EmoteDef->bMoveForwardOnly;
-		PC->MyFortPawn->EmoteWalkSpeed = EmoteDef->WalkForwardSpeed;
 
 		FGameplayAbilitySpec Spec{};
 		UGameplayAbility* Ability = nullptr;
