@@ -2037,6 +2037,16 @@ namespace PlayerBots {
             if (Bot->Pawn->IsDead()) {
                 for (int i = 0; i < PlayerBotArray.size(); i++) {
                     if (PlayerBotArray[i]->Pawn == Bot->Pawn) {
+                        for (int i = 0; i < GameMode->AliveBots.Num(); i++) {
+							AFortAthenaAIBotController* bot = GameMode->AliveBots[i];
+                            if (Bot->PC == bot) {
+                                GameMode->AliveBots.Remove(i);
+                                GameState->PlayersLeft--;
+                                GameState->OnRep_PlayersLeft();
+								break;
+                            }
+                        }
+
                         delete PlayerBotArray[i];
                         PlayerBotArray.erase(PlayerBotArray.begin() + i);
                         Log("Freed a dead bot from the array!");

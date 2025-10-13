@@ -197,13 +197,13 @@ namespace GameMode
 		AFortGameModeAthena* GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
 		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
 
-		APlayerPawn_Athena_C* NewPawn = SpawnAActor<APlayerPawn_Athena_C>(NewPlayer->K2_GetActorLocation(), NewPlayer->K2_GetActorRotation());
+		//APlayerPawn_Athena_C* NewPawn = SpawnAActor<APlayerPawn_Athena_C>(NewPlayer->K2_GetActorLocation(), NewPlayer->K2_GetActorRotation());
 		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)NewPlayer->PlayerState;
 
-		NewPlayer->Possess(NewPawn);
+		/*NewPlayer->Possess(NewPawn);
 
 		NewPawn->Controller = NewPlayer;
-		NewPawn->OnRep_Controller();
+		NewPawn->OnRep_Controller();*/
 
 		NewPlayer->bHasClientFinishedLoading = true;
 		NewPlayer->bHasServerFinishedLoading = true;

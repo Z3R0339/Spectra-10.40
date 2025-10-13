@@ -7,25 +7,33 @@ namespace NetDriver {
 	void (*TickFlushOG)(UNetDriver*, float DeltaSeconds);
 	void TickFlush(UNetDriver* Driver, float DeltaSeconds)
 	{
-		AFortGameModeAthena* GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
-		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
-
-		//if (!Driver->ReplicationDriver) Log("ReplicationDriver Don't Eixst!");
+		if (!Driver) return;
 		if (Driver->ReplicationDriver) ServerReplicateActors(Driver->ReplicationDriver, DeltaSeconds);
 
-		if (GameState->GamePhase == EAthenaGamePhase::Warmup &&
-			GameMode->AlivePlayers.Num() > 0
-			&& (GameMode->AlivePlayers.Num() + GameMode->AliveBots.Num()) < GameMode->GameSession->MaxPlayers
-			&& GameMode->AliveBots.Num() < Globals::MaxBotsToSpawn && Globals::bBotsEnabled)
-		{
-			if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.06f))
-			{
-				Bots::SpawnPlayerBot();
-			}
+		UWorld* World = Driver->World;
+		AFortGameModeAthena* GameMode = (AFortGameModeAthena*)World->AuthorityGameMode;
+		AFortGameStateAthena* GameState = (AFortGameStateAthena*)World->GameState;
+		if (GameMode->AliveBots.Num() > 0 && GameState->GamePhase > EAthenaGamePhase::Warmup) {
+			PlayerBots::TickBots();
+
+			return TickFlushOG(Driver, DeltaSeconds);
 		}
 
-		if (Globals::bBotsEnabled && GameState->GamePhase > EAthenaGamePhase::Setup) {
-			PlayerBots::TickBots();
+		if (Driver->ClientConnections.Num() > 0) {
+			if (Globals::bBotsEnabled && GameState->GamePhase > EAthenaGamePhase::Setup) {
+				if (GameState->GamePhase == EAthenaGamePhase::Warmup) {
+					if ((GameMode->AlivePlayers.Num() + GameMode->AliveBots.Num()) < GameMode->GameSession->MaxPlayers
+						&& GameMode->AliveBots.Num() < Globals::MaxBotsToSpawn)
+					{
+						if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.06f))
+						{
+							Bots::SpawnPlayerBot();
+						}
+					}
+				}
+
+				PlayerBots::TickBots();
+			}
 		}
 
 		return TickFlushOG(Driver, DeltaSeconds);
@@ -33,7 +41,7 @@ namespace NetDriver {
 
 	float GetMaxTickRate()
 	{
-		return 60.0f;
+		return 30.0f;
 	}
 
 	void HookAll() {

@@ -9,7 +9,7 @@ namespace Globals {
 
 	bool bBotsEnabled = true; // I think you can have bots in this version, not sure yet.
 
-	int MaxBotsToSpawn = 95;
+	int MaxBotsToSpawn = 100;
 	int MinPlayersForEarlyStart = 95;
 
 	//REAL PLAYERS
