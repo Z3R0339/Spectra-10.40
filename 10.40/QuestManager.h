@@ -126,7 +126,7 @@ namespace QuestManager {
                 UDataTable* StatTable = Objective.ObjectiveStatHandle.DataTable;
                 FName StatRowName = Objective.ObjectiveStatHandle.RowName;
 
-                //UpdateQuest(QuestManager, CurrentQuest, QuestDefinition, Objective, Count);
+                UpdateQuest(QuestManager, CurrentQuest, QuestDefinition, Objective, Count);
             }
         }
     }
@@ -154,7 +154,7 @@ namespace QuestManager {
     }
 
     void HookAll() {
-        MH_CreateHook((LPVOID)(ImageBase + 0x1A47BC0), SendComplexCustomStatEvent, (LPVOID*)&SendComplexCustomStatEventOG);
+        //MH_CreateHook((LPVOID)(ImageBase + 0x1A47BC0), SendComplexCustomStatEvent, (LPVOID*)&SendComplexCustomStatEventOG);
 
         Log("QuestManager Hooked!");
     }

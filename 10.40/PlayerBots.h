@@ -229,7 +229,7 @@ namespace PlayerBots {
 
         void LaunchIntoAir() {
             FVector BotLoc = LastUpdatedBotLocation;
-            BotLoc.Z = BotLoc.Z + 10000.f;
+            BotLoc.Z = BotLoc.Z + 15000.f;
 
             FHitResult HitResult;
             Pawn->K2_SetActorLocation(BotLoc, false, &HitResult, true);
@@ -1449,7 +1449,7 @@ namespace PlayerBots {
             BotsBTService_InventoryManager InventoryManager;
             BotsBTService_Healing HealingManager;
 
-            if (bot->Pawn->IsDead()) {
+            if (!bot || !bot->Pawn || bot->PlayerState->IsPlayerDead() || bot->Pawn->IsDead()) {
                 return;
             }
 
@@ -1460,7 +1460,7 @@ namespace PlayerBots {
                 Speed = sqrtf(Vel.X * Vel.X + Vel.Y * Vel.Y);
             }
 
-            if (bot->Pawn->bIsDBNO || !bot->NearestChest || !bot->NearestPickup || bot->NearestChest->bHidden || bot->NearestPickup->bHidden || bot->NearestChest->bAlreadySearched) {
+            if (!bot->NearestChest || !bot->NearestPickup || bot->NearestChest->bDestroyed) {
                 AActor* LastLootable = nullptr;
                 if (bot->ClosestLootableType == ELootableType::Chest) {
                     LastLootable = bot->NearestChest;
@@ -1471,8 +1471,10 @@ namespace PlayerBots {
                 bot->UpdateLootableReservation(LastLootable, true);
             }
 
-            if (bot->tick_counter % 120 == 0) {
-                bot->PC->K2_ClearFocus();
+            if (bot->tick_counter % 30 == 0) {
+                if (UKismetMathLibrary::RandomBool()) {
+                    bot->PC->K2_ClearFocus();
+                }
             }
 
             if (bot->tick_counter % 150 == 0) {
@@ -1532,6 +1534,9 @@ namespace PlayerBots {
                         if (bot->HasGun()) {
                             bot->BotState == EBotState::Combat;
                         }
+                        else {
+                            bot->PC->K2_SetFocus(bot->NearestPlayerPawn);
+                        }
                     }
                 }
             }
@@ -1558,7 +1563,7 @@ namespace PlayerBots {
                 }
             }
 
-            if ((bot->tick_counter % 90 == 0) && Speed >= 100 && bot->BotState >= EBotState::Landed) {
+            if ((bot->tick_counter % 30 == 0) && Speed >= 100 && bot->BotState >= EBotState::Landed) {
                 bot->Run();
             }
         }
@@ -2034,7 +2039,7 @@ namespace PlayerBots {
                 continue;
             }
 
-            if (Bot->Pawn->IsDead()) {
+            if (Bot->PlayerState->IsPlayerDead() || Bot->Pawn->IsDead()) {
                 for (int i = 0; i < PlayerBotArray.size(); i++) {
                     if (PlayerBotArray[i]->Pawn == Bot->Pawn) {
                         for (int i = 0; i < GameMode->AliveBots.Num(); i++) {
@@ -2043,6 +2048,19 @@ namespace PlayerBots {
                                 GameMode->AliveBots.Remove(i);
                                 GameState->PlayersLeft--;
                                 GameState->OnRep_PlayersLeft();
+
+                                for (int32 i = 0; i < Bot->PC->Inventory->Inventory.ReplicatedEntries.Num(); i++) {
+                                    FFortItemEntry ItemEntry = Bot->PC->Inventory->Inventory.ReplicatedEntries[i];
+                                    UFortItemDefinition* ItemDef = ItemEntry.ItemDefinition;
+                                    if (!ItemDef)
+                                        continue;
+                                    if (ItemDef->IsA(UAthenaPickaxeItemDefinition::StaticClass()) || ItemDef->IsA(UFortWeaponMeleeItemDefinition::StaticClass()))
+                                        continue;
+                                    if (!((UFortWorldItemDefinition*)ItemDef)->bCanBeDropped)
+                                        continue;
+                                    SpawnPickup(ItemDef, ItemEntry.Count, ItemEntry.LoadedAmmo, Bot->LastUpdatedBotLocation, EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::PlayerElimination);
+                                }
+
 								break;
                             }
                         }
@@ -2152,7 +2170,9 @@ namespace PlayerBots {
                     if (Elapsed > 10.f && DistToZone > Bot->LastZoneTargetDistance - 100.f)
                     {
                         Bot->Pawn->PawnStopFire(0);
-                        Bot->LaunchIntoAir();
+                        if (UKismetMathLibrary::RandomBool()) {
+                            Bot->LaunchIntoAir();
+                        }
 
                         Bot->ZoneTargetStartTime = 0.f;
                         return;
